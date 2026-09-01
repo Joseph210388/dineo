@@ -1,10 +1,13 @@
-import { Inter } from "next/font/google";
+import { Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 import Navbar from "../components/navbar/navbar";
 import Footer from "../components/footer/footer";
 
-const inter = Inter({ subsets: ["latin"] });
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  display: "swap",
+});
 
 export const metadata = {
   title: "Tay Pay",
@@ -14,8 +17,8 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <ClerkProvider>
-      <html lang="en">
-        <body className={inter.className}>
+      <html lang="es" className="scroll-smooth">
+        <body className={`${playfair.className} antialiased`}>
           <Navbar/>
           {children}
           <Footer/>
