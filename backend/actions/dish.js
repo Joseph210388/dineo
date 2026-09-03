@@ -1,31 +1,47 @@
-'use server';
+"use server";
 
-import { mongoConnect } from "../connection";
-import Dish from "../models/dish.model";
+import { sql } from "../db";
 
-/* Obtener todos los platillos */
-
-export async function getAllDish(){
-    try{
-        /* hacer la conexion */
-        await mongoConnect();
-        /* Buscar los platillos */
-        const dishes = await Dish.find();
-        /* retornar dishes*/
-        return JSON.parse(JSON.stringify(dishes))
-    }catch(error){
-        console.error("Error al obtener los platillos:", error);
-        throw error;
-    }
+function mapDish(row, ingredients = []) {
+  return {
+    _id: String(row.id),
+    id: String(row.id),
+    name: row.name,
+    description: row.description,
+    price: Number(row.price),
+    image: row.image_url,
+    category: row.category,
+    stock: row.stock,
+    ingredients,
+  };
 }
-/* obtener un platillo por ID */
+
+export async function getAllDish() {
+  const dishes = await sql`
+    select id, name, description, price, image_url, category, stock
+    from dishes
+    where is_available = true
+    order by name
+  `;
+
+  return dishes.map((dish) => mapDish(dish));
+}
+
 export async function getDishById(id) {
-    try {
-        await mongoConnect();
-        const dish = await Dish.findOne({_id: id});
-        return JSON.parse(JSON.stringify(dish));
-    } catch (error) {
-        console.error("Error al obtener el platillo por ID:", error);
-        throw error;
-    }
+  const [dish] = await sql`
+    select id, name, description, price, image_url, category, stock
+    from dishes
+    where id = ${id}
+    limit 1
+  `;
+
+  if (!dish) {
+    return null;
+  }
+
+  const ingredients = await sql`
+    select name from dish_ingredients where dish_id = ${id} order by name
+  `;
+
+  return mapDish(dish, ingredients.map((item) => item.name));
 }

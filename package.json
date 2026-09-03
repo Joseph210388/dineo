@@ -9,15 +9,14 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@clerk/nextjs": "^6.39.0",
+    "bcryptjs": "^3.0.3",
     "date-fns": "^3.6.0",
-    "mongodb": "^6.21.0",
-    "mongoose": "^8.23.0",
+    "jose": "^6.2.10",
     "next": "15.5.10",
+    "postgres": "^3.4.9",
     "react": "^18",
     "react-dom": "^18",
     "react-icons": "^5.5.0",
-    "svix": "^1.86.0",
     "use-sync-external-store": "^1.6.0"
   },
   "devDependencies": {

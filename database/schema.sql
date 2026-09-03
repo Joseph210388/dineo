@@ -32,7 +32,7 @@ create table if not exists users (
   updated_at timestamptz not null default now(),
   constraint users_email_unique unique (email),
   constraint users_email_format check (position('@' in email) > 1),
-  constraint users_role_allowed check (role in ('customer', 'admin'))
+  constraint users_role_allowed check (role in ('customer', 'employee', 'admin'))
 );
 
 create trigger users_set_updated_at

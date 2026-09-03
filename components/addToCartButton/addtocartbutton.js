@@ -2,11 +2,11 @@
 
 import React, { useEffect, useState } from "react";
 import { addDishToCart, findCartByUserId, createCart  } from "../../backend/actions/cart";
-import { useUser } from "@clerk/nextjs";
+import { useAuth } from "../auth-provider";
 
 
 const AddToCartButton = ({ dishId }) => {
-    const { user } = useUser();
+    const { user } = useAuth();
     const userId = user?.id;
     const [cartId, setCartId] = useState(null);
 

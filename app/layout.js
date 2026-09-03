@@ -1,8 +1,10 @@
+import { headers } from "next/headers";
 import { Playfair_Display } from "next/font/google";
 import "./globals.css";
-import { ClerkProvider } from "@clerk/nextjs";
 import Navbar from "../components/navbar/navbar";
 import Footer from "../components/footer/footer";
+import { AuthProvider } from "../components/auth-provider";
+import { isInternalStaffPath } from "../backend/session-token";
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
@@ -14,16 +16,25 @@ export const metadata = {
   description: "Restaurante de comida peruana",
 };
 
-export default function RootLayout({ children }) {
+export default async function RootLayout({ children }) {
+  const pathname = (await headers()).get("x-pathname") || "";
+  const isStaffArea = isInternalStaffPath(pathname);
+
   return (
-    <ClerkProvider>
-      <html lang="es" className="scroll-smooth">
-        <body className={`${playfair.className} antialiased`}>
-          <Navbar/>
-          {children}
-          <Footer/>
-        </body>
-      </html>
-    </ClerkProvider>
+    <html lang="es" className="scroll-smooth">
+      <body className={`${playfair.className} antialiased`}>
+        <AuthProvider>
+          {isStaffArea ? (
+            children
+          ) : (
+            <>
+              <Navbar />
+              {children}
+              <Footer />
+            </>
+          )}
+        </AuthProvider>
+      </body>
+    </html>
   );
 }

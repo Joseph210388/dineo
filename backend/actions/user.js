@@ -1,31 +1,52 @@
-'use server';
-import { mongoConnect } from "../connection";
-import User from "../models/user.model";
+"use server";
 
-/* Logica para crear usuario */
-export async function createUser (user){
-    try{
-        /* hacer la conexion */
-        await mongoConnect();
-        /* crear un nuevo usuario utilizando el modelo de usuario */
-        const newUser = await User.create(user);
+import { redirect } from "next/navigation";
+import { getCurrentUser, loginStaffUser, loginUser, logoutUser, registerUser } from "../auth";
 
-        return JSON.parse(JSON.stringify(newUser));
-    }catch(error){
-        console.log(error);
-    }
+export async function getSessionUser() {
+  return getCurrentUser();
 }
 
-/* Función para obtener todos los datos de un usuario por su clerkId */
-export async function getUserByClerkId(clerkId) {
-    try {
-        /* hacer la conexion */
-        await mongoConnect();
-        /* buscar el usuario por su clerkId */
-        const user = await User.findOne({ clerkId });
+export async function signUpAction(formData) {
+  try {
+    await registerUser({
+      email: formData.get("email"),
+      password: formData.get("password"),
+      firstName: formData.get("firstName"),
+      lastName: formData.get("lastName"),
+    });
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, message: error.message };
+  }
+}
 
-        return user; // Devolver el usuario encontrado
-    } catch (error) {
-        console.log(error);
-    }
+export async function signInAction(formData) {
+  try {
+    await loginUser({
+      email: formData.get("email"),
+      password: formData.get("password"),
+    });
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, message: error.message };
+  }
+}
+
+export async function signInStaffAction(formData) {
+  try {
+    await loginStaffUser({
+      email: formData.get("email"),
+      password: formData.get("password"),
+    });
+  } catch (error) {
+    return { ok: false, message: error.message };
+  }
+
+  // La cookie de sesion se guarda en esta respuesta; luego vamos al panel
+  redirect("/staff");
+}
+
+export async function signOutAction() {
+  await logoutUser();
 }

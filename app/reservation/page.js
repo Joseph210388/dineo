@@ -1,11 +1,11 @@
 'use client';
 import React, { useState, useEffect } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useAuth } from "../../components/auth-provider";
 import { getReservationsByUser } from "../../backend/actions/reservation";
 
 export default function Reservation(){
 
-    const { user } = useUser();
+    const { user } = useAuth();
     const userId = user?.id;
     const [reservations, setReservations] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -13,7 +13,7 @@ export default function Reservation(){
     useEffect(() => {
         async function fetchReservations() {
             try {
-                const userReservations = await getReservationsByUser(userId);
+                const userReservations = await getReservationsByUser();
                 setReservations(userReservations);
             } catch (error) {
                 console.error("Error al obtener las reservas del usuario:", error);

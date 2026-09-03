@@ -2,12 +2,12 @@
 
 import React, { useEffect, useState } from "react";
 import { getCartItems, deleteCartItem, deleteAllCartItems} from "../../backend/actions/cart";
-import { useUser } from "@clerk/nextjs";
+import { useAuth } from "../../components/auth-provider";
 import {createReservation} from "../../backend/actions/reservation";
 
 export default function Cart() {
     const [cartItems, setCartItems] = useState([]);
-    const { user } = useUser();
+    const { user } = useAuth();
     const userId = user?.id;
     const [totalPrice, setTotalPrice] = useState(0);
     const [reservationDate, setReservationDate] = useState('');
@@ -24,7 +24,7 @@ export default function Cart() {
         async function fetchCartItems() {
             try {
                 if (cartItems.length === 0 && userId) {
-                    const items = await getCartItems(userId); // Obtener los platillos del carrito
+                    const items = await getCartItems();
                     setCartItems(items);
                 }
             } catch (error) {
@@ -79,7 +79,7 @@ export default function Cart() {
 
     const handleDeleteItem = (itemId) => {
         try {
-            deleteCartItem(userId, itemId);
+            deleteCartItem(null, itemId);
             window.location.reload();
         } catch (error) {
             console.error("Error al eliminar el platillo del carrito:", error);
@@ -107,7 +107,7 @@ export default function Cart() {
             console.log('Reserva creada');
             const confirmation = window.confirm('¡Reserva realizada con éxito! ¿Quieres ir a ver tus reservas?');
             if (confirmation) {
-                await deleteAllCartItems(userId);
+                await deleteAllCartItems();
                 window.location.href = '/reservation';
             }
         }

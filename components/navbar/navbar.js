@@ -4,11 +4,17 @@ import React, { useState, useEffect } from 'react';
 import Logo from '../../public/icons/logo.png';
 import Image from 'next/image';
 import Link from 'next/link';
-import { UserButton, useUser } from '@clerk/nextjs';
+import { useAuth } from '../auth-provider';
+import { signOutAction } from '../../backend/actions/user';
 
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { user } = useUser();
+  const { user } = useAuth();
+
+  async function handleLogout() {
+    await signOutAction();
+    window.location.href = '/';
+  }
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -119,7 +125,13 @@ const Navbar = () => {
                         <path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5M1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4z"/>
                       </svg>
                     </a>
-                  <UserButton/>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="rounded-lg bg-red-700 px-2 py-2 text-sm font-medium text-white hover:bg-red-800"
+                  >
+                    Salir
+                  </button>
                 </div>
               )}
             </div>

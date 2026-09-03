@@ -1,6 +1,6 @@
 'use client'
 import React, { useState, useEffect } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useAuth } from "../../components/auth-provider";
 import { format } from 'date-fns';
 import Slider from "../../components/slider/slider";
 import { getAllDish } from "../../backend/actions/dish";
@@ -9,7 +9,7 @@ import DishCard from "../../components/dishcard/dishcard";
 
 export default function Food(){
 
-    const { user } = useUser();
+    const { user } = useAuth();
     const [fechaActual, setFechaActual] = useState(new Date());
     const [dishes, setDishes] = useState([]);
 

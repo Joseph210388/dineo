@@ -1,25 +1,58 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import {
+  SESSION_COOKIE,
+  STAFF_HOME_PATH,
+  STAFF_LOGIN_PATH,
+  isStaffRole,
+  readSessionFromToken,
+} from "./backend/session-token";
 
-const isPublicRoute = createRouteMatcher([
-  "/",
-  "/about",
-  "/contact",
-  "/api/webhooks/clerk(.*)",
-  "/sign-in(.*)",
-  "/sign-up(.*)",
-]);
+const publicRoutes = ["/", "/about", "/contact", "/sign-in", "/sign-up", STAFF_LOGIN_PATH];
 
-export default clerkMiddleware(async (auth, req) => {
-  if (!isPublicRoute(req)) {
-    await auth.protect();
+function isPublicPath(pathname: string) {
+  return publicRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`));
+}
+
+function isStaffPath(pathname: string) {
+  return pathname === STAFF_HOME_PATH || pathname.startsWith(`${STAFF_HOME_PATH}/`);
+}
+
+function continueWithPath(request: NextRequest) {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set("x-pathname", request.nextUrl.pathname);
+  return NextResponse.next({ request: { headers: requestHeaders } });
+}
+
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  const session = await readSessionFromToken(request.cookies.get(SESSION_COOKIE)?.value);
+
+  if (isStaffPath(pathname)) {
+    if (!session) {
+      return NextResponse.redirect(new URL(STAFF_LOGIN_PATH, request.url));
+    }
+    if (!isStaffRole(String(session.role || ""))) {
+      return NextResponse.redirect(new URL("/food", request.url));
+    }
+    return continueWithPath(request);
   }
-});
+
+  if (isPublicPath(pathname)) {
+    return continueWithPath(request);
+  }
+
+  if (session) {
+    return continueWithPath(request);
+  }
+
+  const signInUrl = new URL("/sign-in", request.url);
+  signInUrl.searchParams.set("redirect", pathname);
+  return NextResponse.redirect(signInUrl);
+}
 
 export const config = {
   matcher: [
-    // Skip Next.js internals and all static files, unless found in search params
     "/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)",
-    // Always run for API routes
-    "/(api|trpc)(.*)",
   ],
 };
