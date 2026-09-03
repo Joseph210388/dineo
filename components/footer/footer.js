@@ -9,15 +9,15 @@ export default function Footer() {
                 <div className="md:flex md:justify-between">
                     <div className="mb-6 md:mb-0">
                         <a href="/" className="flex items-center space-x-3 justify-center">
-                            <Image src={Logo} width={40} height={30} className="h-8" alt="TayPay Logo" />
-                            <span className="self-center text-2xl font-semibold whitespace-nowrap text-white">TayPay</span>
+                            <Image src={Logo} width={40} height={30} className="h-8" alt="Logo de Taipei" />
+                            <span className="self-center text-2xl font-semibold whitespace-nowrap text-white">Taipei</span>
                         </a>
                     </div>
                     
                 </div>
                 <hr className="my-6 border-gray-200 sm:mx-auto dark:border-stone-300 lg:my-8" />
                 <div className="sm:flex sm:items-center sm:justify-between">
-                    <span className="text-sm text-stone-300 sm:text-center dark:text-stone-400">© 2024 <a href="/" className="hover:underline hover:hover:text-red-600">TayPay</a>. All Rights Reserved.
+                    <span className="text-sm text-stone-300 sm:text-center dark:text-stone-400">© 2024 <a href="/" className="hover:underline hover:hover:text-red-600">Taipei</a>. All Rights Reserved.
                     </span>
                     <div className="flex mt-4 sm:justify-center sm:mt-0">
                         <a href="#" className="text-stone-300  hover:text-red-700">

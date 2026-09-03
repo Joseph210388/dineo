@@ -10,7 +10,7 @@ const playfair = Playfair_Display({
 });
 
 export const metadata = {
-  title: "Tay Pay",
+  title: "Taipei",
   description: "Restaurante de comida peruana",
 };
 

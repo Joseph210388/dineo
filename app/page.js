@@ -63,7 +63,7 @@ export default function Home() {
             src={Logo}
             width={56}
             height={64}
-            alt="Logo de Tay Pay"
+            alt="Logo de Taipei"
             className="mb-6 h-auto w-12 sm:mb-8 sm:w-14"
           />
           <p className="mb-4 text-[0.65rem] font-medium uppercase tracking-[0.35em] text-red-500 sm:text-xs">
@@ -132,7 +132,7 @@ export default function Home() {
               <Ornament />
             </div>
             <p className="mt-6 text-sm leading-relaxed text-stone-600 sm:text-base">
-              En Tay Pay abrimos las puertas para compartir la Delicia Peruana: ceviches, causas, ajíes y recetas que viajan de la costa al altiplano. Nos apasiona llevar a la mesa los sabores y las tradiciones de Perú, con el mismo respeto con el que se cocinan en casa.
+              En Taipei abrimos las puertas para compartir la Delicia Peruana: ceviches, causas, ajíes y recetas que viajan de la costa al altiplano. Nos apasiona llevar a la mesa los sabores y las tradiciones de Perú, con el mismo respeto con el que se cocinan en casa.
             </p>
             <p className="mt-4 text-sm leading-relaxed text-stone-600 sm:text-base">
               Nuestro equipo de chefs fusiona técnicas contemporáneas con recetas auténticas. El resultado es una experiencia cálida, elegante y generosa: cocina de raíz, servida con calma.

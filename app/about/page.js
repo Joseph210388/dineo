@@ -20,7 +20,7 @@ export default function About(){
                             <h2 className="my-6 text-2xl tracking-tight font-extrabold text-stone-900 sm:text-3xl md:text-4xl">Sobre Nosotros</h2>
                             
                             <p className="text-stone-900">
-                                Tai Pai es un restaurante en Asturias que ofrece auténtica gastronomía peruana desde 1990. Nos apasiona compartir los sabores y tradiciones culinarias de Perú con el mundo. Nuestro talentoso equipo de chefs, fusiona técnicas contemporáneas con sabores auténticos.
+                                Taipei es un restaurante en Asturias que ofrece auténtica gastronomía peruana desde 1990. Nos apasiona compartir los sabores y tradiciones culinarias de Perú con el mundo. Nuestro talentoso equipo de chefs, fusiona técnicas contemporáneas con sabores auténticos.
                             </p>
                         </div>
                     </main>

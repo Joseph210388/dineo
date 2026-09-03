@@ -59,7 +59,7 @@ const Navbar = () => {
               <Image
                 className="h-8 w-auto"
                 src={Logo}
-                alt="Eat Time"
+                alt="Taipei"
               />
             </div>
             <div className="hidden sm:ml-6 sm:block">
