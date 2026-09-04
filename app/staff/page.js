@@ -2,6 +2,9 @@ import { redirect } from "next/navigation";
 import { requireStaff } from "../../backend/auth";
 import { signOutAction } from "../../backend/actions/user";
 
+// El panel lee cookies y Postgres: no se puede generar en el build de Vercel
+export const dynamic = "force-dynamic";
+
 export const metadata = {
   title: "Panel del personal | Taipei",
   robots: { index: false, follow: false },
