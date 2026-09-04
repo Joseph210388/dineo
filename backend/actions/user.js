@@ -50,3 +50,8 @@ export async function signInStaffAction(formData) {
 export async function signOutAction() {
   await logoutUser();
 }
+
+export async function signOutStaffAction() {
+  await logoutUser();
+  redirect("/acceso-personal");
+}

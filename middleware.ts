@@ -8,7 +8,7 @@ import {
   readSessionFromToken,
 } from "./backend/session-token";
 
-const publicRoutes = ["/", "/about", "/contact", "/sign-in", "/sign-up", STAFF_LOGIN_PATH];
+const publicRoutes = ["/", "/about", "/contact", "/food", "/dish", "/sign-in", "/sign-up", STAFF_LOGIN_PATH];
 
 function isPublicPath(pathname: string) {
   return publicRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`));

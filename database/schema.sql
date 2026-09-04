@@ -68,6 +68,7 @@ create table if not exists dishes (
   category text not null,
   stock integer not null default 0,
   is_available boolean not null default true,
+  recommendation text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint dishes_price_non_negative check (price >= 0),
@@ -91,6 +92,24 @@ create table if not exists dish_ingredients (
 );
 
 create index if not exists dish_ingredients_dish_id_idx on dish_ingredients (dish_id);
+
+create table if not exists dish_allergens (
+  id bigint generated always as identity primary key,
+  dish_id bigint not null references dishes(id) on delete cascade,
+  name text not null,
+  constraint dish_allergens_unique unique (dish_id, name)
+);
+
+create index if not exists dish_allergens_dish_id_idx on dish_allergens (dish_id);
+
+create table if not exists dish_images (
+  id bigint generated always as identity primary key,
+  dish_id bigint not null references dishes(id) on delete cascade,
+  image_url text not null,
+  sort_order integer not null default 0
+);
+
+create index if not exists dish_images_dish_id_idx on dish_images (dish_id);
 
 -- ---------------------------------------------------------------------------
 -- Carrito: un carrito por usuario (en Mongo cartId era un array innecesario)
@@ -182,6 +201,8 @@ begin
     revoke all on table sessions from anon, authenticated;
     revoke all on table dishes from anon, authenticated;
     revoke all on table dish_ingredients from anon, authenticated;
+    revoke all on table dish_allergens from anon, authenticated;
+    revoke all on table dish_images from anon, authenticated;
     revoke all on table carts from anon, authenticated;
     revoke all on table cart_items from anon, authenticated;
     revoke all on table reservations from anon, authenticated;
@@ -193,6 +214,8 @@ alter table users enable row level security;
 alter table sessions enable row level security;
 alter table dishes enable row level security;
 alter table dish_ingredients enable row level security;
+alter table dish_allergens enable row level security;
+alter table dish_images enable row level security;
 alter table carts enable row level security;
 alter table cart_items enable row level security;
 alter table reservations enable row level security;

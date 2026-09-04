@@ -162,6 +162,14 @@ export async function requireStaff() {
   return user;
 }
 
+export async function requireAdmin() {
+  const user = await requireStaff();
+  if (user.role !== "admin") {
+    throw new Error("Solo administracion puede hacer esto");
+  }
+  return user;
+}
+
 export async function logoutUser() {
   const payload = await getSessionPayload();
   if (payload?.sid) {

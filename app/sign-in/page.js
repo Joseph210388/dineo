@@ -4,12 +4,16 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signInAction } from "../../backend/actions/user";
+import { buildAuthQuery, safeRedirectPath } from "../../backend/safe-redirect";
 
 function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const redirectPath = safeRedirectPath(searchParams.get("redirect"));
+  const reason = searchParams.get("reason");
+  const authQuery = buildAuthQuery(redirectPath, reason);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -24,7 +28,7 @@ function SignInForm() {
       return;
     }
 
-    router.push(searchParams.get("redirect") || "/food");
+    router.push(redirectPath);
     router.refresh();
   }
 
@@ -34,7 +38,11 @@ function SignInForm() {
       className="w-full max-w-md rounded-2xl bg-white/95 p-6 shadow-lg sm:p-8"
     >
       <h1 className="text-2xl font-semibold text-stone-900 sm:text-3xl">Entrar a Taipei</h1>
-      <p className="mt-2 text-sm text-stone-600">Usa el email y la contraseña de tu cuenta.</p>
+      <p className="mt-2 text-sm text-stone-600">
+        {reason === "cart"
+          ? "Para añadir al carrito, entra o crea una cuenta."
+          : "Usa el email y la contraseña de tu cuenta."}
+      </p>
 
       <label className="mt-6 block text-sm font-medium text-stone-800" htmlFor="email">
         Email
@@ -71,7 +79,7 @@ function SignInForm() {
 
       <p className="mt-4 text-center text-sm text-stone-600">
         ¿No tienes cuenta?{" "}
-        <Link href="/sign-up" className="font-semibold text-red-700 hover:underline">
+        <Link href={`/sign-up${authQuery}`} className="font-semibold text-red-700 hover:underline">
           Regístrate
         </Link>
       </p>

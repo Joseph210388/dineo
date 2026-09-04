@@ -1,14 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signUpAction } from "../../backend/actions/user";
+import { buildAuthQuery, safeRedirectPath } from "../../backend/safe-redirect";
 
-export default function SignUpPage() {
+function SignUpForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const redirectPath = safeRedirectPath(searchParams.get("redirect"));
+  const reason = searchParams.get("reason");
+  const authQuery = buildAuthQuery(redirectPath, reason);
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -23,18 +28,21 @@ export default function SignUpPage() {
       return;
     }
 
-    router.push("/food");
+    router.push(redirectPath);
     router.refresh();
   }
 
   return (
-    <main className="background-image flex min-h-[calc(100svh-8rem)] items-center justify-center px-4 py-10 sm:py-16">
       <form
         onSubmit={handleSubmit}
         className="w-full max-w-md rounded-2xl bg-white/95 p-6 shadow-lg sm:p-8"
       >
         <h1 className="text-2xl font-semibold text-stone-900 sm:text-3xl">Crear cuenta</h1>
-        <p className="mt-2 text-sm text-stone-600">Taipei guarda tu contraseña hasheada, no en texto.</p>
+        <p className="mt-2 text-sm text-stone-600">
+          {reason === "cart"
+            ? "Crea una cuenta para añadir platos al carrito."
+            : "Taipei guarda tu contraseña hasheada, no en texto."}
+        </p>
 
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
@@ -98,11 +106,20 @@ export default function SignUpPage() {
 
         <p className="mt-4 text-center text-sm text-stone-600">
           ¿Ya tienes cuenta?{" "}
-          <Link href="/sign-in" className="font-semibold text-red-700 hover:underline">
+          <Link href={`/sign-in${authQuery}`} className="font-semibold text-red-700 hover:underline">
             Entra
           </Link>
         </p>
       </form>
+  );
+}
+
+export default function SignUpPage() {
+  return (
+    <main className="background-image flex min-h-[calc(100svh-8rem)] items-center justify-center px-4 py-10 sm:py-16">
+      <Suspense fallback={<p className="text-white">Cargando...</p>}>
+        <SignUpForm />
+      </Suspense>
     </main>
   );
 }
