@@ -5,7 +5,8 @@ import postgres from "postgres";
 dns.setDefaultResultOrder("ipv4first");
 
 const globalForDb = globalThis;
-const SUPABASE_POOLER_HOST = "aws-0-eu-west-1.pooler.supabase.com";
+// Este proyecto vive en el cluster aws-1, no en aws-0 (tenant/user not found)
+const SUPABASE_POOLER_HOST = "aws-1-eu-west-1.pooler.supabase.com";
 
 function connectionUrlForRuntime(rawUrl) {
   const onVercel = Boolean(process.env.VERCEL);
