@@ -1,4 +1,4 @@
-import Link from "next/link";
+import StaffLink from "./staff-link";
 
 export default function RelatedCatalogField({
   name,
@@ -15,9 +15,9 @@ export default function RelatedCatalogField({
       <legend className="text-sm font-medium text-stone-700">{label}</legend>
       <p className="mt-1 text-xs text-stone-500">
         Marca los que lleva este plato. Si falta uno, créalo en{" "}
-        <Link href={catalogHref} className="font-medium text-red-700 hover:underline">
+        <StaffLink href={catalogHref} className="font-medium text-red-700 hover:underline">
           su tabla
-        </Link>
+        </StaffLink>
         .
       </p>
 

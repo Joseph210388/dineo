@@ -10,7 +10,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test:load": "node scripts/load-test.mjs"
+    "test:load": "node scripts/load-test.mjs",
+    "test:routes": "node scripts/smoke-routes.mjs"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

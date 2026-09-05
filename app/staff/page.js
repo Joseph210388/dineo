@@ -1,4 +1,4 @@
-import Link from "next/link";
+import StaffLink from "../../components/staff/staff-link";
 import { getDashboardStats } from "../../backend/actions/staff";
 import { formatMoney, formatDate } from "../../backend/staff-format";
 import { ReservationBadge } from "../../components/staff/status-badge";
@@ -22,12 +22,12 @@ export default async function StaffHomePage() {
             Dinero de reservas confirmadas o completadas. Las pendientes no entran en la caja.
           </p>
         </div>
-        <Link
+        <StaffLink
           href="/staff/dishes/new"
           className="inline-flex w-fit rounded-lg bg-red-700 px-4 py-2 text-sm font-medium text-white hover:bg-red-800"
         >
           Nuevo plato
-        </Link>
+        </StaffLink>
       </div>
 
       <section className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -61,9 +61,9 @@ export default async function StaffHomePage() {
       <section className="mt-6 rounded-2xl border border-stone-200 bg-white">
         <div className="flex items-center justify-between border-b border-stone-100 px-4 py-3 sm:px-5">
           <h2 className="text-base text-stone-900">Últimas reservas</h2>
-          <Link href="/staff/reservations" className="text-sm text-red-700 hover:underline">
+          <StaffLink href="/staff/reservations" className="text-sm text-red-700 hover:underline">
             Ver todas
-          </Link>
+          </StaffLink>
         </div>
 
         {stats.recentReservations.length === 0 ? (
@@ -72,7 +72,7 @@ export default async function StaffHomePage() {
           <ul className="divide-y divide-stone-100">
             {stats.recentReservations.map((reservation) => (
               <li key={reservation.id}>
-                <Link
+                <StaffLink
                   href={`/staff/reservations/${reservation.id}`}
                   className="flex flex-col gap-2 px-4 py-3 transition hover:bg-stone-50 sm:flex-row sm:items-center sm:justify-between sm:px-5"
                 >
@@ -86,7 +86,7 @@ export default async function StaffHomePage() {
                     <ReservationBadge status={reservation.status} />
                     <span className="text-sm font-medium text-stone-800">{formatMoney(reservation.total)}</span>
                   </div>
-                </Link>
+                </StaffLink>
               </li>
             ))}
           </ul>

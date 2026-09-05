@@ -1,4 +1,4 @@
-import Link from "next/link";
+import StaffLink from "../../../../components/staff/staff-link";
 import { notFound } from "next/navigation";
 import {
   deleteReservationAction,
@@ -26,9 +26,9 @@ export default async function StaffReservationDetailPage({ params }) {
 
   return (
     <main className="mx-auto w-full max-w-3xl">
-      <Link href="/staff/reservations" className="text-sm text-red-700 hover:underline">
+      <StaffLink href="/staff/reservations" className="text-sm text-red-700 hover:underline">
         Volver a reservas
-      </Link>
+      </StaffLink>
 
       <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>

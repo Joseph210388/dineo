@@ -1,4 +1,4 @@
-import Link from "next/link";
+import StaffLink from "../../../../components/staff/staff-link";
 import { notFound, redirect } from "next/navigation";
 import { deleteStaffUserAction, getStaffUser, updateStaffUserAction } from "../../../../backend/actions/staff";
 import { formatDate, formatMoney } from "../../../../backend/staff-format";
@@ -23,9 +23,9 @@ export default async function StaffUserDetailPage({ params }) {
 
   return (
     <main className="mx-auto w-full max-w-3xl">
-      <Link href="/staff/users" className="text-sm text-red-700 hover:underline">
+      <StaffLink href="/staff/users" className="text-sm text-red-700 hover:underline">
         Volver a usuarios
-      </Link>
+      </StaffLink>
       <h1 className="mt-3 text-[clamp(1.4rem,3vw,2rem)] text-stone-900">
         {user.firstName} {user.lastName}
       </h1>

@@ -405,6 +405,67 @@ export async function listStaffCustomers() {
   }));
 }
 
+export async function getStaffReservationsPageData() {
+  await requireStaff();
+
+  const reservationRows = await sql`
+    select
+      reservations.id,
+      reservations.reservation_date,
+      reservations.reservation_time,
+      reservations.number_of_people,
+      reservations.total_price,
+      reservations.status,
+      reservations.notes,
+      reservations.payment_method,
+      users.first_name,
+      users.last_name,
+      users.email
+    from reservations
+    inner join users on users.id = reservations.user_id
+    order by reservations.reservation_date desc, reservations.reservation_time desc
+  `;
+
+  const customerRows = await sql`
+    select id, email, first_name, last_name
+    from users
+    where role = 'customer' and is_active = true
+    order by first_name, last_name
+  `;
+
+  const dishRows = await sql`
+    select id, name, price
+    from dishes
+    where is_available = true
+    order by name
+  `;
+
+  return {
+    reservations: reservationRows.map((row) => ({
+      id: String(row.id),
+      date: toDateText(row.reservation_date),
+      time: String(row.reservation_time).slice(0, 5),
+      people: row.number_of_people,
+      total: Number(row.total_price),
+      status: row.status,
+      notes: row.notes,
+      paymentMethod: row.payment_method || DEFAULT_PAYMENT_METHOD,
+      guestName: `${row.first_name} ${row.last_name}`,
+      guestEmail: row.email,
+    })),
+    customers: customerRows.map((row) => ({
+      id: String(row.id),
+      email: row.email,
+      name: `${row.first_name} ${row.last_name}`,
+    })),
+    dishes: dishRows.map((row) => ({
+      id: String(row.id),
+      name: row.name,
+      price: Number(row.price),
+    })),
+  };
+}
+
 export async function createStaffReservationAction(formData) {
   await requireStaff();
 

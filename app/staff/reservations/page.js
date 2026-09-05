@@ -1,16 +1,11 @@
-import Link from "next/link";
-import { listStaffCustomers, listStaffDishes, listStaffReservations } from "../../../backend/actions/staff";
+import StaffLink from "../../../components/staff/staff-link";
+import { getStaffReservationsPageData } from "../../../backend/actions/staff";
 import { formatDate, formatMoney, paymentMethodLabel } from "../../../backend/staff-format";
 import { ReservationBadge } from "../../../components/staff/status-badge";
 import StaffReservationForm from "../../../components/staff/staff-reservation-form";
 
 export default async function StaffReservationsPage() {
-  const [reservations, customers, dishes] = await Promise.all([
-    listStaffReservations(),
-    listStaffCustomers(),
-    listStaffDishes(),
-  ]);
-  const availableDishes = dishes.filter((dish) => dish.isAvailable);
+  const { reservations, customers, dishes } = await getStaffReservationsPageData();
 
   return (
     <main className="mx-auto w-full max-w-6xl">
@@ -25,7 +20,7 @@ export default async function StaffReservationsPage() {
 
       <section className="mt-6">
         <h2 className="text-base font-semibold text-stone-900">Nueva reserva</h2>
-        <StaffReservationForm customers={customers} dishes={availableDishes} />
+        <StaffReservationForm customers={customers} dishes={dishes} />
       </section>
 
       {reservations.length === 0 ? (
@@ -44,7 +39,7 @@ export default async function StaffReservationsPage() {
           <ul className="divide-y divide-stone-100">
             {reservations.map((reservation) => (
               <li key={reservation.id}>
-                <Link
+                <StaffLink
                   href={`/staff/reservations/${reservation.id}`}
                   className="grid grid-cols-1 gap-2 px-4 py-3 transition hover:bg-stone-50 sm:px-5 lg:grid-cols-[1.3fr_1fr_0.7fr_0.6fr_0.7fr] lg:items-center lg:gap-3"
                 >
@@ -58,7 +53,7 @@ export default async function StaffReservationsPage() {
                   <p className="text-sm text-stone-600">{paymentMethodLabel(reservation.paymentMethod)}</p>
                   <p className="text-sm font-medium text-stone-800">{formatMoney(reservation.total)}</p>
                   <ReservationBadge status={reservation.status} />
-                </Link>
+                </StaffLink>
               </li>
             ))}
           </ul>
@@ -67,4 +62,3 @@ export default async function StaffReservationsPage() {
     </main>
   );
 }
-

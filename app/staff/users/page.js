@@ -1,4 +1,4 @@
-import Link from "next/link";
+import StaffLink from "../../../components/staff/staff-link";
 import { redirect } from "next/navigation";
 import { listStaffUsers } from "../../../backend/actions/staff";
 import { formatDate } from "../../../backend/staff-format";
@@ -28,7 +28,7 @@ export default async function StaffUsersPage() {
         <ul className="divide-y divide-stone-100">
           {users.map((user) => (
             <li key={user.id}>
-              <Link
+              <StaffLink
                 href={`/staff/users/${user.id}`}
                 className="grid grid-cols-1 gap-1 px-4 py-3 transition hover:bg-stone-50 sm:px-5 lg:grid-cols-[1.4fr_1fr_0.7fr_0.6fr] lg:items-center lg:gap-3"
               >
@@ -44,7 +44,7 @@ export default async function StaffUsersPage() {
                   {user.isActive ? "Activo" : "Inactivo"}
                 </p>
                 <p className="text-xs text-stone-400 lg:hidden">Alta {formatDate(user.createdAt)}</p>
-              </Link>
+              </StaffLink>
             </li>
           ))}
         </ul>

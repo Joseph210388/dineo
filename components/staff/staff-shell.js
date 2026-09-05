@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import StaffLink from "./staff-link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
@@ -83,10 +83,9 @@ export default function StaffShell({ user, children }) {
 
             // Sin prefetch: si no, al entrar al panel se abren 5 rutas a Postgres a la vez y Vercel corta a los 10s
             return (
-              <Link
+              <StaffLink
                 key={item.href}
                 href={item.href}
-                prefetch={false}
                 onClick={closeMenu}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
                   active
@@ -96,7 +95,7 @@ export default function StaffShell({ user, children }) {
               >
                 <Icon className="h-5 w-5 shrink-0" />
                 <span>{item.label}</span>
-              </Link>
+              </StaffLink>
             );
           })}
         </nav>
