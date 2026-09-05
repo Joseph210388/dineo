@@ -55,11 +55,23 @@ const loadCachedDishes = unstable_cache(loadAllDishes, ["public-dishes"], {
   tags: ["dishes"],
 });
 
+function isProductionBuild() {
+  return process.env.NEXT_PHASE === "phase-production-build";
+}
+
 export async function getAllDish() {
+  // El build de Vercel no debe abrir Postgres (IPv6 ENETUNREACH)
+  if (isProductionBuild()) {
+    return [];
+  }
+
   return loadCachedDishes();
 }
 
 export async function getDishById(id) {
+  if (isProductionBuild()) {
+    return null;
+  }
   const [dish] = await sql`
     select id, name, description, price, image_url, category, stock, recommendation
     from dishes

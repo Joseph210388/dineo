@@ -1,4 +1,4 @@
-import { jwtVerify } from "jose";
+import { jwtVerify } from "jose/jwt/verify";
 import { STAFF_HOME_PATH, STAFF_LOGIN_PATH, isInternalStaffPath } from "../lib/staff-paths";
 import { isStaffRole } from "../lib/roles";
 
