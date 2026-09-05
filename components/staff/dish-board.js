@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createDishAction, deleteDishAction, updateDishAction } from "../../backend/actions/staff";
+import { createDishAction, deleteDishAction, getStaffDish, updateDishAction } from "../../backend/actions/staff";
 import { formatMoney } from "../../backend/staff-format";
 import Popup from "../popup/popup";
 import ConfirmPopup from "../popup/confirm-popup";
@@ -34,6 +34,12 @@ export default function DishBoard({ dishes, catalogs }) {
     setDishToDelete(null);
     setEditingDish(null);
     setIsCreating(false);
+  }
+
+  async function openDish(dish) {
+    setIsCreating(false);
+    const full = await getStaffDish(dish.id);
+    setEditingDish(full || dish);
   }
 
   function handleSaved() {
@@ -83,7 +89,7 @@ export default function DishBoard({ dishes, catalogs }) {
             <button
               key={dish.id}
               type="button"
-              onClick={() => setEditingDish(dish)}
+              onClick={() => openDish(dish)}
               className="overflow-hidden rounded-2xl border border-stone-200 bg-white text-left transition hover:border-red-700"
             >
               <img src={dish.image} alt="" className="h-40 w-full object-cover" />
@@ -113,7 +119,7 @@ export default function DishBoard({ dishes, catalogs }) {
               <li key={dish.id}>
                 <button
                   type="button"
-                  onClick={() => setEditingDish(dish)}
+                  onClick={() => openDish(dish)}
                   className="grid w-full grid-cols-1 gap-2 px-4 py-3 text-left transition hover:bg-stone-50 sm:px-5 md:grid-cols-[2fr_0.8fr_0.6fr_0.6fr] md:items-center md:gap-3"
                 >
                   <div className="flex min-w-0 items-center gap-3">

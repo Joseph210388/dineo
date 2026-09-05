@@ -13,28 +13,26 @@ export async function loadDishRelations(dishIds) {
     return { ingredients: [], allergens: [], images: [] };
   }
 
-  const [ingredients, allergens, images] = await Promise.all([
-    sql`
+  const ingredients = await sql`
       select links.dish_id, ingredients.id, ingredients.name
       from dish_ingredient_links as links
       inner join ingredients on ingredients.id = links.ingredient_id
       where links.dish_id in ${sql(dishIds)}
       order by ingredients.name
-    `,
-    sql`
+    `;
+  const allergens = await sql`
       select links.dish_id, allergens.id, allergens.name
       from dish_allergen_links as links
       inner join allergens on allergens.id = links.allergen_id
       where links.dish_id in ${sql(dishIds)}
       order by allergens.name
-    `,
-    sql`
+    `;
+  const images = await sql`
       select dish_id, image_url
       from dish_images
       where dish_id in ${sql(dishIds)}
       order by sort_order, id
-    `,
-  ]);
+    `;
 
   return { ingredients, allergens, images };
 }

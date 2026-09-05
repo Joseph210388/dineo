@@ -155,14 +155,14 @@ export async function getDashboardStats() {
 export async function listStaffDishes() {
   await requireStaff();
 
+  // La lista solo pinta foto, nombre y precio; ingredientes/alérgenos se piden al abrir el plato
   const dishes = await sql`
     select id, name, description, price, image_url, category, stock, is_available, recommendation
     from dishes
     order by name
   `;
 
-  const extras = await loadDishRelations(dishes.map((dish) => dish.id));
-  return dishes.map((dish) => mapStaffDish(dish, relationsForDish(dish.id, extras)));
+  return dishes.map((dish) => mapStaffDish(dish));
 }
 
 export async function getStaffDish(id) {
@@ -578,11 +578,24 @@ export async function deleteStaffUserAction(formData) {
 
 export async function listStaffCatalogs() {
   await requireStaff();
-  const [ingredients, allergens] = await Promise.all([listCatalogIngredients(), listCatalogAllergens()]);
+  const ingredients = await listCatalogIngredients();
+  const allergens = await listCatalogAllergens();
   return {
     ingredients: ingredients.map(mapCatalogItem),
     allergens: allergens.map(mapCatalogItem),
   };
+}
+
+export async function listStaffIngredients() {
+  await requireStaff();
+  const ingredients = await listCatalogIngredients();
+  return ingredients.map(mapCatalogItem);
+}
+
+export async function listStaffAllergens() {
+  await requireStaff();
+  const allergens = await listCatalogAllergens();
+  return allergens.map(mapCatalogItem);
 }
 
 export async function createCatalogItemAction(formData) {

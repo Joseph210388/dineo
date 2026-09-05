@@ -1,6 +1,5 @@
 "use server";
 
-import { unstable_cache } from "next/cache";
 import { sql } from "../db";
 import { loadDishRelations, relationsForDish } from "../dish-relations";
 
@@ -50,11 +49,6 @@ async function loadAllDishes() {
   });
 }
 
-const loadCachedDishes = unstable_cache(loadAllDishes, ["public-dishes"], {
-  revalidate: 60,
-  tags: ["dishes"],
-});
-
 function isProductionBuild() {
   return process.env.NEXT_PHASE === "phase-production-build";
 }
@@ -65,7 +59,7 @@ export async function getAllDish() {
     return [];
   }
 
-  return loadCachedDishes();
+  return loadAllDishes();
 }
 
 export async function getDishById(id) {

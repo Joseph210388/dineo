@@ -101,7 +101,15 @@ function runQuery(args) {
 // Proxy: el cliente se crea en la primera consulta, no al cargar el archivo
 export const sql = new Proxy(function sqlTag() {}, {
   apply(_target, _thisArg, args) {
-    return runQuery(args).catch((error) => {
+    const result = runQuery(args);
+
+    // sql(ids) para IN no es una Promise; envolverla rompe Carta con NOT_TAGGED_CALL
+
+    if (result == null || typeof result.then !== "function") {
+      return result;
+    }
+
+    return result.catch((error) => {
       if (!shouldReconnect(error)) {
         throw error;
       }
