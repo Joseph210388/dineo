@@ -21,7 +21,10 @@ Una base que ya existe = el siguiente `.sql` de `migrations/`, y luego actualiza
 - Id: `tpyygppuszvhpupnvmxp`
 - Región: `eu-west-1` (Irlanda)
 - Postgres: 17
-- Host directo: `db.tpyygppuszvhpupnvmxp.supabase.co:5432`
+- Host directo: `db.tpyygppuszvhpupnvmxp.supabase.co:5432` (IPv6; bien en local).
+- En **Vercel** no uses ese host a pelo: el build no llega por IPv6 (`ENETUNREACH`). La app, si detecta Vercel y un host `db.*.supabase.co`, pasa sola al pooler:
+  `postgres.tpyygppuszvhpupnvmxp@aws-0-eu-west-1.pooler.supabase.com:6543`
+  (usuario `postgres.<id>`, no `postgres`). `/food` y `/favorites` no se generan en el build.
 - Migraciones ya aplicadas en ese proyecto:
   1. `20260904231251_dish_popup_details`
   2. `20260905001016_add_ingredient_allergen_catalogs`
