@@ -123,6 +123,14 @@ export default function DishPopup({ dish, onClose, onOpenDish, showClose = true 
             </p>
           ) : null}
 
+          <div className="flex flex-col gap-3 border-t border-stone-100 pt-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-sm text-stone-500">Total del plato:</p>
+              <p className="text-[clamp(1.5rem,4vw,2rem)] text-stone-900">{dish.price}€</p>
+            </div>
+            <AddToCartButton dishId={dish._id} variant="popup" />
+          </div>
+
           {dish.suggestions?.length ? (
             <div>
               <h3 className="text-sm font-semibold text-stone-900">También te puede gustar</h3>
@@ -145,14 +153,6 @@ export default function DishPopup({ dish, onClose, onOpenDish, showClose = true 
               </div>
             </div>
           ) : null}
-
-          <div className="flex flex-col gap-3 border-t border-stone-100 pt-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-sm text-stone-500">Total del plato:</p>
-              <p className="text-[clamp(1.5rem,4vw,2rem)] text-stone-900">{dish.price}€</p>
-            </div>
-            <AddToCartButton dishId={dish._id} variant="popup" />
-          </div>
         </div>
       </article>
     </Popup>

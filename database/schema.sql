@@ -83,24 +83,35 @@ execute function set_updated_at();
 create index if not exists dishes_category_idx on dishes (category);
 create index if not exists dishes_is_available_idx on dishes (is_available);
 
--- Un platillo, varios ingredientes (en Mongo era un array)
-create table if not exists dish_ingredients (
+-- Catálogo compartido: un ingrediente o alérgeno se crea una vez y se relaciona a varios platos
+create table if not exists ingredients (
   id bigint generated always as identity primary key,
-  dish_id bigint not null references dishes(id) on delete cascade,
   name text not null,
-  constraint dish_ingredients_unique unique (dish_id, name)
+  created_at timestamptz not null default now(),
+  constraint ingredients_name_unique unique (name)
 );
 
-create index if not exists dish_ingredients_dish_id_idx on dish_ingredients (dish_id);
-
-create table if not exists dish_allergens (
+create table if not exists allergens (
   id bigint generated always as identity primary key,
-  dish_id bigint not null references dishes(id) on delete cascade,
   name text not null,
-  constraint dish_allergens_unique unique (dish_id, name)
+  created_at timestamptz not null default now(),
+  constraint allergens_name_unique unique (name)
 );
 
-create index if not exists dish_allergens_dish_id_idx on dish_allergens (dish_id);
+create table if not exists dish_ingredient_links (
+  dish_id bigint not null references dishes(id) on delete cascade,
+  ingredient_id bigint not null references ingredients(id) on delete cascade,
+  primary key (dish_id, ingredient_id)
+);
+
+create table if not exists dish_allergen_links (
+  dish_id bigint not null references dishes(id) on delete cascade,
+  allergen_id bigint not null references allergens(id) on delete cascade,
+  primary key (dish_id, allergen_id)
+);
+
+create index if not exists dish_ingredient_links_ingredient_idx on dish_ingredient_links (ingredient_id);
+create index if not exists dish_allergen_links_allergen_idx on dish_allergen_links (allergen_id);
 
 create table if not exists dish_images (
   id bigint generated always as identity primary key,
@@ -200,8 +211,10 @@ begin
     revoke all on table users from anon, authenticated;
     revoke all on table sessions from anon, authenticated;
     revoke all on table dishes from anon, authenticated;
-    revoke all on table dish_ingredients from anon, authenticated;
-    revoke all on table dish_allergens from anon, authenticated;
+    revoke all on table ingredients from anon, authenticated;
+    revoke all on table allergens from anon, authenticated;
+    revoke all on table dish_ingredient_links from anon, authenticated;
+    revoke all on table dish_allergen_links from anon, authenticated;
     revoke all on table dish_images from anon, authenticated;
     revoke all on table carts from anon, authenticated;
     revoke all on table cart_items from anon, authenticated;
@@ -213,8 +226,10 @@ end $$;
 alter table users enable row level security;
 alter table sessions enable row level security;
 alter table dishes enable row level security;
-alter table dish_ingredients enable row level security;
-alter table dish_allergens enable row level security;
+alter table ingredients enable row level security;
+alter table allergens enable row level security;
+alter table dish_ingredient_links enable row level security;
+alter table dish_allergen_links enable row level security;
 alter table dish_images enable row level security;
 alter table carts enable row level security;
 alter table cart_items enable row level security;

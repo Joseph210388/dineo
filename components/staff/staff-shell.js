@@ -12,6 +12,8 @@ import {
   HiOutlineLogout,
   HiOutlineMenu,
   HiOutlineX,
+  HiOutlineBeaker,
+  HiOutlineExclamationCircle,
 } from "react-icons/hi";
 import Logo from "../../public/icons/logo.png";
 import { signOutStaffAction } from "../../backend/actions/user";
@@ -21,6 +23,8 @@ function navItems(isAdmin) {
   const items = [
     { href: "/staff", label: "Resumen", icon: HiOutlineHome, exact: true },
     { href: "/staff/dishes", label: "Carta", icon: HiOutlineBookOpen },
+    { href: "/staff/ingredients", label: "Ingredientes", icon: HiOutlineBeaker },
+    { href: "/staff/allergens", label: "Alérgenos", icon: HiOutlineExclamationCircle },
     { href: "/staff/reservations", label: "Reservas", icon: HiOutlineCalendar },
   ];
 

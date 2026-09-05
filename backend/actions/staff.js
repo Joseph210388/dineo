@@ -4,16 +4,19 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { sql } from "../db";
 import { requireAdmin, requireStaff } from "../auth";
+import {
+  listCatalogAllergens,
+  listCatalogIngredients,
+  loadDishRelations,
+  mapCatalogItem,
+  parseIdList,
+  parseTextList,
+  relationsForDish,
+  replaceDishRelations,
+} from "../dish-relations";
 
 const RESERVATION_STATUSES = ["pending", "confirmed", "cancelled", "completed"];
 const USER_ROLES = ["customer", "employee", "admin"];
-
-function parseList(value) {
-  return String(value || "")
-    .split(/[,|\n]/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
 
 function toDateText(value) {
   if (!value) {
@@ -39,33 +42,9 @@ function mapStaffDish(row, extras = {}) {
     recommendation: row.recommendation || "",
     ingredients: extras.ingredients || [],
     allergens: extras.allergens || [],
+    ingredientIds: extras.ingredientIds || [],
+    allergenIds: extras.allergenIds || [],
   };
-}
-
-async function replaceNamedList(table, dishId, names) {
-  if (table === "ingredients") {
-    await sql`delete from dish_ingredients where dish_id = ${dishId}`;
-    for (const name of names) {
-      await sql`insert into dish_ingredients (dish_id, name) values (${dishId}, ${name})`;
-    }
-    return;
-  }
-
-  if (table === "allergens") {
-    await sql`delete from dish_allergens where dish_id = ${dishId}`;
-    for (const name of names) {
-      await sql`insert into dish_allergens (dish_id, name) values (${dishId}, ${name})`;
-    }
-    return;
-  }
-
-  await sql`delete from dish_images where dish_id = ${dishId}`;
-  for (const [index, imageUrl] of names.entries()) {
-    await sql`
-      insert into dish_images (dish_id, image_url, sort_order)
-      values (${dishId}, ${imageUrl}, ${index})
-    `;
-  }
 }
 
 function refreshStaff() {
@@ -73,6 +52,8 @@ function refreshStaff() {
   revalidatePath("/staff/dishes");
   revalidatePath("/staff/reservations");
   revalidatePath("/staff/users");
+  revalidatePath("/staff/ingredients");
+  revalidatePath("/staff/allergens");
   revalidatePath("/food");
 }
 
@@ -152,12 +133,13 @@ export async function listStaffDishes() {
   await requireStaff();
 
   const dishes = await sql`
-    select id, name, description, price, image_url, category, stock, is_available
+    select id, name, description, price, image_url, category, stock, is_available, recommendation
     from dishes
     order by name
   `;
 
-  return dishes.map((dish) => mapStaffDish(dish));
+  const extras = await loadDishRelations(dishes.map((dish) => dish.id));
+  return dishes.map((dish) => mapStaffDish(dish, relationsForDish(dish.id, extras)));
 }
 
 export async function getStaffDish(id) {
@@ -174,17 +156,8 @@ export async function getStaffDish(id) {
     return null;
   }
 
-  const [ingredients, allergens, images] = await Promise.all([
-    sql`select name from dish_ingredients where dish_id = ${id} order by name`,
-    sql`select name from dish_allergens where dish_id = ${id} order by name`,
-    sql`select image_url from dish_images where dish_id = ${id} order by sort_order, id`,
-  ]);
-
-  return mapStaffDish(dish, {
-    ingredients: ingredients.map((item) => item.name),
-    allergens: allergens.map((item) => item.name),
-    images: images.map((item) => item.image_url),
-  });
+  const extras = await loadDishRelations([dish.id]);
+  return mapStaffDish(dish, relationsForDish(dish.id, extras));
 }
 
 export async function createDishAction(formData) {
@@ -198,9 +171,9 @@ export async function createDishAction(formData) {
   const stock = Number(formData.get("stock"));
   const isAvailable = formData.get("isAvailable") === "on";
   const recommendation = String(formData.get("recommendation") || "").trim();
-  const ingredients = parseList(formData.get("ingredients"));
-  const allergens = parseList(formData.get("allergens"));
-  const extraImages = parseList(formData.get("extraImages"));
+  const ingredientIds = parseIdList(formData, "ingredientIds");
+  const allergenIds = parseIdList(formData, "allergenIds");
+  const extraImages = parseTextList(formData.get("extraImages"));
 
   if (!name || !description || !imageUrl || !category || Number.isNaN(price) || price < 0) {
     return { ok: false, message: "Revisa nombre, descripcion, imagen, categoria y precio" };
@@ -212,12 +185,9 @@ export async function createDishAction(formData) {
     returning id
   `;
 
-  await replaceNamedList("ingredients", dish.id, ingredients);
-  await replaceNamedList("allergens", dish.id, allergens);
-  await replaceNamedList("images", dish.id, extraImages);
-
+  await replaceDishRelations(dish.id, ingredientIds, allergenIds, extraImages);
   refreshStaff();
-  redirect(`/staff/dishes/${dish.id}`);
+  return { ok: true, id: String(dish.id) };
 }
 
 export async function updateDishAction(formData) {
@@ -232,9 +202,9 @@ export async function updateDishAction(formData) {
   const stock = Number(formData.get("stock"));
   const isAvailable = formData.get("isAvailable") === "on";
   const recommendation = String(formData.get("recommendation") || "").trim();
-  const ingredients = parseList(formData.get("ingredients"));
-  const allergens = parseList(formData.get("allergens"));
-  const extraImages = parseList(formData.get("extraImages"));
+  const ingredientIds = parseIdList(formData, "ingredientIds");
+  const allergenIds = parseIdList(formData, "allergenIds");
+  const extraImages = parseTextList(formData.get("extraImages"));
 
   if (!id || !name || !description || !imageUrl || !category || Number.isNaN(price) || price < 0) {
     return { ok: false, message: "Revisa los datos del platillo" };
@@ -254,12 +224,9 @@ export async function updateDishAction(formData) {
     where id = ${id}
   `;
 
-  await replaceNamedList("ingredients", id, ingredients);
-  await replaceNamedList("allergens", id, allergens);
-  await replaceNamedList("images", id, extraImages);
-
+  await replaceDishRelations(id, ingredientIds, allergenIds, extraImages);
   refreshStaff();
-  redirect(`/staff/dishes/${id}`);
+  return { ok: true, id };
 }
 
 export async function deleteDishAction(formData) {
@@ -271,7 +238,7 @@ export async function deleteDishAction(formData) {
 
   await sql`delete from dishes where id = ${id}`;
   refreshStaff();
-  redirect("/staff/dishes");
+  return { ok: true };
 }
 
 export async function listStaffReservations() {
@@ -486,4 +453,79 @@ export async function deleteStaffUserAction(formData) {
   await sql`delete from users where id = ${id}`;
   refreshStaff();
   redirect("/staff/users");
+}
+
+export async function listStaffCatalogs() {
+  await requireStaff();
+  const [ingredients, allergens] = await Promise.all([listCatalogIngredients(), listCatalogAllergens()]);
+  return {
+    ingredients: ingredients.map(mapCatalogItem),
+    allergens: allergens.map(mapCatalogItem),
+  };
+}
+
+export async function createCatalogItemAction(formData) {
+  await requireStaff();
+  const kind = String(formData.get("kind") || "");
+  const name = String(formData.get("name") || "").trim();
+
+  if (!name || (kind !== "ingredient" && kind !== "allergen")) {
+    return { ok: false, message: "Escribe un nombre" };
+  }
+
+  try {
+    if (kind === "ingredient") {
+      await sql`insert into ingredients (name) values (${name})`;
+    } else {
+      await sql`insert into allergens (name) values (${name})`;
+    }
+  } catch {
+    return { ok: false, message: "Ese nombre ya existe" };
+  }
+
+  refreshStaff();
+  return { ok: true };
+}
+
+export async function updateCatalogItemAction(formData) {
+  await requireStaff();
+  const kind = String(formData.get("kind") || "");
+  const id = String(formData.get("id") || "");
+  const name = String(formData.get("name") || "").trim();
+
+  if (!id || !name || (kind !== "ingredient" && kind !== "allergen")) {
+    return { ok: false, message: "Revisa el nombre" };
+  }
+
+  try {
+    if (kind === "ingredient") {
+      await sql`update ingredients set name = ${name} where id = ${id}`;
+    } else {
+      await sql`update allergens set name = ${name} where id = ${id}`;
+    }
+  } catch {
+    return { ok: false, message: "Ese nombre ya existe" };
+  }
+
+  refreshStaff();
+  return { ok: true };
+}
+
+export async function deleteCatalogItemAction(formData) {
+  await requireStaff();
+  const kind = String(formData.get("kind") || "");
+  const id = String(formData.get("id") || "");
+
+  if (!id || (kind !== "ingredient" && kind !== "allergen")) {
+    return { ok: false, message: "Falta el elemento" };
+  }
+
+  if (kind === "ingredient") {
+    await sql`delete from ingredients where id = ${id}`;
+  } else {
+    await sql`delete from allergens where id = ${id}`;
+  }
+
+  refreshStaff();
+  return { ok: true };
 }

@@ -18,9 +18,10 @@ export default function Popup({
   maxWidthClass = "max-w-md",
   zClass = "z-[70]",
   panelClassName = "",
+  listenEscape = true,
 }) {
   useEffect(() => {
-    if (!isOpen) {
+    if (!isOpen || !listenEscape) {
       return undefined;
     }
 
@@ -36,7 +37,7 @@ export default function Popup({
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = "";
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, listenEscape]);
 
   if (!isOpen) {
     return null;
