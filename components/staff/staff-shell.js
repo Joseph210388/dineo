@@ -81,10 +81,12 @@ export default function StaffShell({ user, children }) {
             const Icon = item.icon;
             const active = isActivePath(pathname, item.href, item.exact);
 
+            // Sin prefetch: si no, al entrar al panel se abren 5 rutas a Postgres a la vez y Vercel corta a los 10s
             return (
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={false}
                 onClick={closeMenu}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm transition ${
                   active

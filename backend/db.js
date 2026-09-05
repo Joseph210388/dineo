@@ -38,6 +38,24 @@ function connectionUrlForRuntime(rawUrl) {
   return rawUrl;
 }
 
+function shouldReconnect(error) {
+  const code = String(error?.code || "");
+  return (
+    code === "CONNECT_TIMEOUT" ||
+    code === "CONNECTION_CLOSED" ||
+    code === "CONNECTION_ENDED" ||
+    code === "ECONNRESET"
+  );
+}
+
+function resetSql() {
+  const previous = globalForDb.__taipeiSql;
+  globalForDb.__taipeiSql = null;
+  if (previous?.end) {
+    previous.end({ timeout: 1 }).catch(() => {});
+  }
+}
+
 function createSql() {
   const connectionUrl = process.env.DATABASE_URL;
 
@@ -48,14 +66,24 @@ function createSql() {
 
   const isServerless = Boolean(process.env.VERCEL);
 
-  return postgres(connectionUrlForRuntime(connectionUrl), {
+  const client = postgres(connectionUrlForRuntime(connectionUrl), {
     ssl: "require",
     // En Vercel cada instancia atiende pocas peticiones; en local varias a la vez se encolaban con max: 1
     max: isServerless ? 1 : 8,
-    idle_timeout: 20,
-    connect_timeout: 10,
+    idle_timeout: isServerless ? 10 : 20,
+    max_lifetime: isServerless ? 60 : 0,
+    // El limite de la funcion en Hobby es 10s; no podemos gastarlos todos en el handshake
+    connect_timeout: 5,
     prepare: false,
+    fetch_types: false,
+    onclose() {
+      if (globalForDb.__taipeiSql === client) {
+        globalForDb.__taipeiSql = null;
+      }
+    },
   });
+
+  return client;
 }
 
 function getSql() {
@@ -66,10 +94,20 @@ function getSql() {
   return globalForDb.__taipeiSql;
 }
 
+function runQuery(args) {
+  return getSql()(...args);
+}
+
 // Proxy: el cliente se crea en la primera consulta, no al cargar el archivo
 export const sql = new Proxy(function sqlTag() {}, {
   apply(_target, _thisArg, args) {
-    return getSql()(...args);
+    return runQuery(args).catch((error) => {
+      if (!shouldReconnect(error)) {
+        throw error;
+      }
+      resetSql();
+      return runQuery(args);
+    });
   },
   get(_target, property) {
     const client = getSql();

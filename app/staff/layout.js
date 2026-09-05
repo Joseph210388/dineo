@@ -3,6 +3,7 @@ import { requireStaff } from "../../backend/auth";
 import StaffShell from "../../components/staff/staff-shell";
 
 export const dynamic = "force-dynamic";
+export const preferredRegion = "dub1";
 
 export const metadata = {
   title: "Panel | Taipei",

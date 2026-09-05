@@ -63,70 +63,91 @@ function refreshStaff() {
 export async function getDashboardStats() {
   await requireStaff();
 
-  const [[money], [catalog], [people], recentReservations] = await Promise.all([
-    sql`
-      select
-        coalesce(sum(total_price) filter (
-          where status in ('confirmed', 'completed')
-            and reservation_date = current_date
-        ), 0) as today_sales,
-        coalesce(sum(total_price) filter (
-          where status in ('confirmed', 'completed')
-            and reservation_date >= date_trunc('month', current_date)::date
-        ), 0) as month_sales,
-        coalesce(sum(total_price) filter (
-          where status in ('confirmed', 'completed')
-        ), 0) as all_sales,
-        count(*) filter (where status = 'pending') as pending_count,
-        count(*) filter (where reservation_date = current_date) as today_reservations
-      from reservations
-    `,
-    sql`
-      select
-        count(*) as dish_count,
-        count(*) filter (where is_available = true) as available_dishes
-      from dishes
-    `,
-    sql`
-      select
-        count(*) filter (where role = 'customer') as customer_count,
-        count(*) filter (where role in ('employee', 'admin')) as staff_count
-      from users
-      where is_active = true
-    `,
-    sql`
-      select
-        reservations.id,
-        reservations.reservation_date,
-        reservations.reservation_time,
-        reservations.total_price,
-        reservations.status,
-        users.first_name,
-        users.last_name
-      from reservations
-      inner join users on users.id = reservations.user_id
-      order by reservations.created_at desc
-      limit 6
-    `,
-  ]);
+  // Una sola ida a Postgres: en Vercel el pooler solo deja 1 conexion por instancia
+  const [row] = await sql`
+    select
+      coalesce((
+        select sum(total_price)
+        from reservations
+        where status in ('confirmed', 'completed')
+          and reservation_date = current_date
+      ), 0) as today_sales,
+      coalesce((
+        select sum(total_price)
+        from reservations
+        where status in ('confirmed', 'completed')
+          and reservation_date >= date_trunc('month', current_date)::date
+      ), 0) as month_sales,
+      coalesce((
+        select sum(total_price)
+        from reservations
+        where status in ('confirmed', 'completed')
+      ), 0) as all_sales,
+      (
+        select count(*)::int
+        from reservations
+        where status = 'pending'
+      ) as pending_count,
+      (
+        select count(*)::int
+        from reservations
+        where reservation_date = current_date
+      ) as today_reservations,
+      (select count(*)::int from dishes) as dish_count,
+      (
+        select count(*)::int
+        from dishes
+        where is_available = true
+      ) as available_dishes,
+      (
+        select count(*)::int
+        from users
+        where is_active = true and role = 'customer'
+      ) as customer_count,
+      (
+        select count(*)::int
+        from users
+        where is_active = true and role in ('employee', 'admin')
+      ) as staff_count,
+      (
+        select coalesce(json_agg(recent order by recent.created_at desc), '[]'::json)
+        from (
+          select
+            reservations.id,
+            reservations.reservation_date,
+            reservations.reservation_time,
+            reservations.total_price,
+            reservations.status,
+            reservations.created_at,
+            users.first_name,
+            users.last_name
+          from reservations
+          inner join users on users.id = reservations.user_id
+          order by reservations.created_at desc
+          limit 6
+        ) as recent
+      ) as recent_reservations
+  `;
+
+  const recentReservations = Array.isArray(row.recent_reservations) ? row.recent_reservations : [];
 
   return {
-    todaySales: Number(money.today_sales),
-    monthSales: Number(money.month_sales),
-    allSales: Number(money.all_sales),
-    pendingCount: Number(money.pending_count),
-    todayReservations: Number(money.today_reservations),
-    dishCount: Number(catalog.dish_count),
-    availableDishes: Number(catalog.available_dishes),
-    customerCount: Number(people.customer_count),
-    staffCount: Number(people.staff_count),
-    recentReservations: recentReservations.map((row) => ({
-      id: String(row.id),
-      date: toDateText(row.reservation_date),
-      time: String(row.reservation_time).slice(0, 5),
-      total: Number(row.total_price),
-      status: row.status,
-      guestName: `${row.first_name} ${row.last_name}`,
+    todaySales: Number(row.today_sales),
+    monthSales: Number(row.month_sales),
+    allSales: Number(row.all_sales),
+    pendingCount: Number(row.pending_count),
+    todayReservations: Number(row.today_reservations),
+    dishCount: Number(row.dish_count),
+    availableDishes: Number(row.available_dishes),
+    customerCount: Number(row.customer_count),
+    staffCount: Number(row.staff_count),
+    recentReservations: recentReservations.map((reservation) => ({
+      id: String(reservation.id),
+      date: toDateText(reservation.reservation_date),
+      time: String(reservation.reservation_time).slice(0, 5),
+      total: Number(reservation.total_price),
+      status: reservation.status,
+      guestName: `${reservation.first_name} ${reservation.last_name}`,
     })),
   };
 }

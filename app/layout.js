@@ -9,6 +9,9 @@ const playfair = Playfair_Display({
   display: "swap",
 });
 
+// Postgres está en Irlanda; el default de Vercel (Virginia) tardaba tanto que /staff petaba a los 10s
+export const preferredRegion = "dub1";
+
 export const metadata = {
   title: "Taipei",
   description: "Restaurante de comida peruana",
