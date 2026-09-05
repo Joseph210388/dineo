@@ -19,6 +19,8 @@ export default function FoodFilters({
   onRemoveTag,
   onClear,
   tags,
+  kicker = "La carta",
+  heading = "Cómo quieres pedir",
 }) {
   const typeOptions = DISH_TYPES.filter((item) => countByType(dishes, item.id) > 0).map((item) => ({
     id: item.id,
@@ -37,9 +39,9 @@ export default function FoodFilters({
       <div className="rounded-2xl border border-red-900/10 bg-[#fffaf3] p-4 shadow-sm lg:sticky lg:top-24">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
-            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-red-800">La carta</p>
+            <p className="text-[0.7rem] font-semibold uppercase tracking-[0.22em] text-red-800">{kicker}</p>
             <h2 className="mt-1 text-[clamp(1.1rem,2.4vw,1.3rem)] font-semibold text-stone-900">
-              Cómo quieres pedir
+              {heading}
             </h2>
           </div>
           <button

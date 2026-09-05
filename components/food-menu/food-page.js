@@ -1,23 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { useAuth } from "../auth-provider";
 import Slider from "../slider/slider";
-import DishCard from "../dishcard/dishcard";
+import DishCard, { DISH_CARD_GRID_CLASS } from "../dishcard/dishcard";
 import DishCatalog from "../dish-popup/dish-catalog";
 import FoodFilters from "./food-filters";
 import FilterChipList from "../filter-chip/filter-chip";
 import ViewToggle from "../view-toggle/view-toggle";
-import {
-  PRICE_ORDERS,
-  filterAndSortDishes,
-  getActiveFilterTags,
-  getDishCategories,
-  toggleSelection,
-} from "../../lib/filter-dishes";
+import { PRICE_ORDERS } from "../../lib/filter-dishes";
 import { isStaffRole } from "../../lib/roles";
+import { useDishFilters } from "../../lib/use-dish-filters";
 
 const VIEW_STORAGE_KEY = "taipei_food_view";
 
@@ -25,12 +20,8 @@ export default function FoodPage({ dishes }) {
   const { user } = useAuth();
   const customer = user && !isStaffRole(user.role) ? user : null;
   const [fechaActual] = useState(() => new Date());
-  const [areFiltersOpen, setAreFiltersOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const [categories, setCategories] = useState([]);
-  const [types, setTypes] = useState([]);
-  const [order, setOrder] = useState("menu");
   const [viewMode, setViewMode] = useState("grid");
+  const filters = useDishFilters(dishes);
 
   useEffect(() => {
     const savedView = window.localStorage.getItem(VIEW_STORAGE_KEY);
@@ -38,44 +29,6 @@ export default function FoodPage({ dishes }) {
       setViewMode(savedView);
     }
   }, []);
-
-  const categoryOptions = useMemo(() => getDishCategories(dishes), [dishes]);
-  const visibleDishes = useMemo(
-    () => filterAndSortDishes(dishes, { query, categories, types, order }),
-    [dishes, query, categories, types, order]
-  );
-  const tags = useMemo(
-    () => getActiveFilterTags({ query, categories, types, order }),
-    [query, categories, types, order]
-  );
-
-  function clearFilters() {
-    setQuery("");
-    setCategories([]);
-    setTypes([]);
-    setOrder("menu");
-  }
-
-  function removeTag(tag) {
-    if (tag.group === "query") {
-      setQuery("");
-      return;
-    }
-
-    if (tag.group === "category") {
-      setCategories((current) => current.filter((item) => item !== tag.value));
-      return;
-    }
-
-    if (tag.group === "type") {
-      setTypes((current) => current.filter((item) => item !== tag.value));
-      return;
-    }
-
-    if (tag.group === "order") {
-      setOrder("menu");
-    }
-  }
 
   function changeView(nextView) {
     setViewMode(nextView);
@@ -112,18 +65,18 @@ export default function FoodPage({ dishes }) {
         <div className="mt-6 flex flex-col gap-5 lg:mt-8 lg:flex-row lg:items-start lg:gap-6">
           <FoodFilters
             dishes={dishes}
-            categoryOptions={categoryOptions}
-            query={query}
-            categories={categories}
-            types={types}
-            areOpen={areFiltersOpen}
-            onToggle={() => setAreFiltersOpen((open) => !open)}
-            onQueryChange={setQuery}
-            onToggleCategory={(id) => setCategories((current) => toggleSelection(current, id))}
-            onToggleType={(id) => setTypes((current) => toggleSelection(current, id))}
-            onRemoveTag={removeTag}
-            onClear={clearFilters}
-            tags={tags}
+            categoryOptions={filters.categoryOptions}
+            query={filters.query}
+            categories={filters.categories}
+            types={filters.types}
+            areOpen={filters.areFiltersOpen}
+            onToggle={() => filters.setAreFiltersOpen((open) => !open)}
+            onQueryChange={filters.setQuery}
+            onToggleCategory={filters.onToggleCategory}
+            onToggleType={filters.onToggleType}
+            onRemoveTag={filters.removeTag}
+            onClear={filters.clearFilters}
+            tags={filters.tags}
           />
 
           <div className="min-w-0 flex-1">
@@ -134,7 +87,7 @@ export default function FoodPage({ dishes }) {
                     Platillos disponibles
                   </h2>
                   <p className="mt-1 text-sm text-stone-500">
-                    {visibleDishes.length} de {dishes.length} en la mesa
+                    {filters.visibleDishes.length} de {dishes.length} en la mesa
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -143,8 +96,8 @@ export default function FoodPage({ dishes }) {
                   </label>
                   <select
                     id="food-sort"
-                    value={order}
-                    onChange={(event) => setOrder(event.target.value)}
+                    value={filters.order}
+                    onChange={(event) => filters.setOrder(event.target.value)}
                     className="min-h-10 max-w-full rounded-xl border border-stone-200 bg-white px-3 py-2 text-xs text-stone-700 outline-none focus:border-red-700 focus:ring-4 focus:ring-red-700/15 sm:text-sm"
                   >
                     {PRICE_ORDERS.map((item) => (
@@ -158,7 +111,11 @@ export default function FoodPage({ dishes }) {
               </div>
 
               <div className="hidden lg:block">
-                <FilterChipList tags={tags} onRemove={removeTag} onClear={tags.length ? clearFilters : undefined} />
+                <FilterChipList
+                  tags={filters.tags}
+                  onRemove={filters.removeTag}
+                  onClear={filters.tags.length ? filters.clearFilters : undefined}
+                />
               </div>
 
               {!customer ? (
@@ -170,15 +127,13 @@ export default function FoodPage({ dishes }) {
 
             <DishCatalog dishes={dishes}>
               {(openDish) =>
-                visibleDishes.length ? (
+                filters.visibleDishes.length ? (
                   <div
                     className={
-                      viewMode === "list"
-                        ? "grid grid-cols-1 gap-3"
-                        : "grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3"
+                      viewMode === "list" ? "grid grid-cols-1 gap-3" : DISH_CARD_GRID_CLASS
                     }
                   >
-                    {visibleDishes.map((dish) => (
+                    {filters.visibleDishes.map((dish) => (
                       <DishCard key={dish._id} dish={dish} onOpen={openDish} variant={viewMode} />
                     ))}
                   </div>
@@ -190,7 +145,7 @@ export default function FoodPage({ dishes }) {
                     </p>
                     <button
                       type="button"
-                      onClick={clearFilters}
+                      onClick={filters.clearFilters}
                       className="mt-5 rounded-2xl bg-red-800 px-5 py-2.5 text-sm font-medium text-white hover:bg-red-900"
                     >
                       Ver toda la carta

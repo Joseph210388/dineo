@@ -23,11 +23,21 @@ module.exports = {
           from: { opacity: "0" },
           to: { opacity: "1" },
         },
+        toastIn: {
+          from: { transform: "translate3d(1rem, 0, 0)", opacity: "0" },
+          to: { transform: "translate3d(0, 0, 0)", opacity: "1" },
+        },
+        toastUp: {
+          from: { transform: "translate3d(0, 0.75rem, 0)", opacity: "0" },
+          to: { transform: "translate3d(0, 0, 0)", opacity: "1" },
+        },
       },
       animation: {
         "sheet-in": "sheetIn 0.32s cubic-bezier(0.22, 1, 0.36, 1) both",
         "sheet-in-desk": "sheetInDesk 0.28s cubic-bezier(0.22, 1, 0.36, 1) both",
         "backdrop-in": "backdropIn 0.2s ease-out both",
+        "toast-in": "toastIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both",
+        "toast-up": "toastUp 0.28s cubic-bezier(0.22, 1, 0.36, 1) both",
       },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",

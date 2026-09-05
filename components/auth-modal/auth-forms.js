@@ -9,6 +9,12 @@ const fieldClass =
   "w-full rounded-lg border border-stone-300 p-3 text-stone-900 outline-none focus:border-red-700 focus:ring-4 focus:ring-red-700/15";
 
 function reasonCopy(reason, mode) {
+  if (reason === "favorites") {
+    return mode === "sign-up"
+      ? "Crea una cuenta para guardar platos en favoritos."
+      : "Para guardar un plato en favoritos, entra o crea una cuenta.";
+  }
+
   if (reason === "cart") {
     return mode === "sign-up"
       ? "Crea una cuenta para añadir platos al carrito."

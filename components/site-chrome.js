@@ -16,9 +16,11 @@ export default function SiteChrome({ children }) {
 
   return (
     <AuthModalProvider>
-      <Navbar />
-      {children}
-      <Footer />
+      <div className="flex min-h-svh flex-1 flex-col bg-stone-800">
+        <Navbar />
+        <div className="flex flex-1 flex-col bg-cream">{children}</div>
+        <Footer />
+      </div>
     </AuthModalProvider>
   );
 }

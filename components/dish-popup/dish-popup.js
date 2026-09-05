@@ -1,42 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { HiHeart, HiOutlineHeart } from "react-icons/hi";
-import { useAuth } from "../auth-provider";
-import { useAuthModal } from "../auth-modal/auth-modal-provider";
 import AddToCartButton from "../addToCartButton/addtocartbutton";
+import FavoriteButton from "../favorite-button/favorite-button";
 import Popup from "../popup/popup";
-import { readFavorites, toggleFavoriteId } from "../../lib/favorites";
 
 export default function DishPopup({ dish, onClose, onOpenDish, showClose = true }) {
-  const { user, isLoaded } = useAuth();
-  const { openAuth } = useAuthModal();
   const photos = dish.images?.length ? dish.images : [dish.image];
   const [photoIndex, setPhotoIndex] = useState(0);
-  const [isFavorite, setIsFavorite] = useState(false);
 
   useEffect(() => {
     setPhotoIndex(0);
-    if (user) {
-      setIsFavorite(readFavorites(user.id).includes(String(dish.id)));
-    } else {
-      setIsFavorite(false);
-    }
-  }, [dish.id, user]);
-
-  function toggleFavorite() {
-    if (!isLoaded) {
-      return;
-    }
-
-    if (!user) {
-      openAuth({ mode: "sign-in", reason: "cart" });
-      return;
-    }
-
-    const next = toggleFavoriteId(user.id, dish.id);
-    setIsFavorite(next.includes(String(dish.id)));
-  }
+  }, [dish.id]);
 
   const currentPhoto = photos[photoIndex] || dish.image;
 
@@ -78,18 +53,7 @@ export default function DishPopup({ dish, onClose, onOpenDish, showClose = true 
 
           <div className="flex items-start justify-between gap-3">
             <h2 className="min-w-0 text-[clamp(1.5rem,5vw,2.1rem)] leading-tight">{dish.name}</h2>
-            <button
-              type="button"
-              onClick={toggleFavorite}
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-stone-200 bg-stone-50"
-              aria-label={isFavorite ? "Quitar de favoritos" : "Añadir a favoritos"}
-            >
-              {isFavorite ? (
-                <HiHeart className="h-6 w-6 text-red-600" />
-              ) : (
-                <HiOutlineHeart className="h-6 w-6 text-stone-700" />
-              )}
-            </button>
+            <FavoriteButton dish={dish} variant="panel" />
           </div>
 
           <p className="text-sm leading-relaxed text-stone-600 sm:text-base">{dish.description}</p>
