@@ -1,22 +1,36 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createDishAction, deleteDishAction, getStaffDish, updateDishAction } from "../../backend/actions/staff";
 import { formatMoney } from "../../backend/staff-format";
 import Popup from "../popup/popup";
 import ConfirmPopup from "../popup/confirm-popup";
+import SearchInput from "../search-input/search-input";
+import ShowMoreButton from "../show-more-button/show-more-button";
 import ViewToggle from "../view-toggle/view-toggle";
 import DishForm from "./dish-form";
+import { matchesSearch, MENU_PAGE_SIZE, TABLE_PAGE_SIZE } from "../../lib/search-text";
+import { usePagedList } from "../../lib/use-paged-list";
 
 const VIEW_KEY = "taipei_staff_dishes_view";
 
 export default function DishBoard({ dishes, catalogs }) {
   const router = useRouter();
   const [viewMode, setViewMode] = useState("list");
+  const [query, setQuery] = useState("");
   const [editingDish, setEditingDish] = useState(null);
   const [isCreating, setIsCreating] = useState(false);
   const [dishToDelete, setDishToDelete] = useState(null);
+
+  const filtered = useMemo(() => {
+    return dishes.filter((dish) =>
+      matchesSearch(`${dish.name} ${dish.category}`, query)
+    );
+  }, [dishes, query]);
+
+  const pageSize = viewMode === "grid" ? MENU_PAGE_SIZE : TABLE_PAGE_SIZE;
+  const page = usePagedList(filtered, pageSize);
 
   useEffect(() => {
     const saved = window.localStorage.getItem(VIEW_KEY);
@@ -79,13 +93,32 @@ export default function DishBoard({ dishes, catalogs }) {
         </div>
       </div>
 
+      {dishes.length > 0 ? (
+        <div className="mt-6 max-w-xl">
+          <SearchInput
+            value={query}
+            onChange={setQuery}
+            label="Buscar plato"
+            placeholder="Nombre o categoría"
+          />
+          <p className="mt-2 text-sm text-stone-500">
+            {page.total} coinciden · se ven {page.visible.length}
+          </p>
+        </div>
+      ) : null}
+
       {dishes.length === 0 ? (
         <p className="mt-8 rounded-2xl border border-dashed border-stone-300 bg-white px-4 py-10 text-center text-sm text-stone-500">
           No hay platillos. Crea el primero.
         </p>
+      ) : page.total === 0 ? (
+        <p className="mt-8 rounded-2xl border border-dashed border-stone-300 bg-white px-4 py-10 text-center text-sm text-stone-500">
+          Nada coincide. Prueba otro nombre o limpia la búsqueda.
+        </p>
       ) : viewMode === "grid" ? (
+        <div>
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {dishes.map((dish) => (
+          {page.visible.map((dish) => (
             <button
               key={dish.id}
               type="button"
@@ -106,7 +139,10 @@ export default function DishBoard({ dishes, catalogs }) {
             </button>
           ))}
         </div>
+        <ShowMoreButton remaining={page.remaining} onClick={page.showMore} />
+        </div>
       ) : (
+        <div>
         <div className="mt-6 overflow-hidden rounded-2xl border border-stone-200 bg-white">
           <div className="hidden grid-cols-[2fr_0.8fr_0.6fr_0.6fr] gap-3 border-b border-stone-100 px-5 py-3 text-xs font-medium uppercase tracking-wide text-stone-500 md:grid">
             <span>Plato</span>
@@ -115,7 +151,7 @@ export default function DishBoard({ dishes, catalogs }) {
             <span>Estado</span>
           </div>
           <ul className="divide-y divide-stone-100">
-            {dishes.map((dish) => (
+            {page.visible.map((dish) => (
               <li key={dish.id}>
                 <button
                   type="button"
@@ -138,6 +174,8 @@ export default function DishBoard({ dishes, catalogs }) {
               </li>
             ))}
           </ul>
+        </div>
+        <ShowMoreButton remaining={page.remaining} onClick={page.showMore} />
         </div>
       )}
 

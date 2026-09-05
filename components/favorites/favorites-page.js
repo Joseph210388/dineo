@@ -8,9 +8,12 @@ import DishCatalog from "../dish-popup/dish-catalog";
 import FoodFilters from "../food-menu/food-filters";
 import FilterChipList from "../filter-chip/filter-chip";
 import ViewToggle from "../view-toggle/view-toggle";
+import ShowMoreButton from "../show-more-button/show-more-button";
 import { FAVORITES_CHANGED_EVENT, readFavorites } from "../../lib/favorites";
 import { PRICE_ORDERS } from "../../lib/filter-dishes";
+import { MENU_PAGE_SIZE } from "../../lib/search-text";
 import { useDishFilters } from "../../lib/use-dish-filters";
+import { usePagedList } from "../../lib/use-paged-list";
 
 const VIEW_STORAGE_KEY = "taipei_favorites_view";
 
@@ -38,6 +41,7 @@ export default function FavoritesPage({ dishes }) {
   }, [dishes, favoritesRevision, isLoaded, user]);
 
   const filters = useDishFilters(favoriteDishes);
+  const page = usePagedList(filters.visibleDishes, MENU_PAGE_SIZE);
 
   useEffect(() => {
     const savedView = window.localStorage.getItem(VIEW_STORAGE_KEY);
@@ -103,7 +107,10 @@ export default function FavoritesPage({ dishes }) {
                       Tus platillos
                     </h2>
                     <p className="mt-1 text-sm text-stone-500">
-                      {filters.visibleDishes.length} de {favoriteDishes.length} guardados
+                      Se ven {page.visible.length} de {filters.visibleDishes.length} coincidencias
+                      {filters.visibleDishes.length !== favoriteDishes.length
+                        ? ` · ${favoriteDishes.length} guardados`
+                        : ""}
                     </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
@@ -138,14 +145,17 @@ export default function FavoritesPage({ dishes }) {
               <DishCatalog dishes={favoriteDishes}>
                 {(openDish) =>
                   filters.visibleDishes.length ? (
-                    <div
-                      className={
-                        viewMode === "list" ? "grid grid-cols-1 gap-3" : DISH_CARD_GRID_CLASS
-                      }
-                    >
-                      {filters.visibleDishes.map((dish) => (
-                        <DishCard key={dish._id} dish={dish} onOpen={openDish} variant={viewMode} />
-                      ))}
+                    <div>
+                      <div
+                        className={
+                          viewMode === "list" ? "grid grid-cols-1 gap-3" : DISH_CARD_GRID_CLASS
+                        }
+                      >
+                        {page.visible.map((dish) => (
+                          <DishCard key={dish._id} dish={dish} onOpen={openDish} variant={viewMode} />
+                        ))}
+                      </div>
+                      <ShowMoreButton remaining={page.remaining} onClick={page.showMore} />
                     </div>
                   ) : (
                     <div className="rounded-2xl border border-dashed border-red-900/20 bg-white/70 px-6 py-14 text-center">

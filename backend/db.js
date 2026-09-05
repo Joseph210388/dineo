@@ -94,6 +94,11 @@ function getSql() {
   return globalForDb.__taipeiSql;
 }
 
+function isTaggedTemplateCall(args) {
+  const first = args[0];
+  return Boolean(first && Array.isArray(first.raw));
+}
+
 function runQuery(args) {
   return getSql()(...args);
 }
@@ -101,9 +106,12 @@ function runQuery(args) {
 // Proxy: el cliente se crea en la primera consulta, no al cargar el archivo
 export const sql = new Proxy(function sqlTag() {}, {
   apply(_target, _thisArg, args) {
-    const result = runQuery(args);
+    // sql(ids) para un IN no es una consulta etiquetada; si se reintenta como Promise, Carta cae
+    if (!isTaggedTemplateCall(args)) {
+      return getSql()(...args);
+    }
 
-    // sql(ids) para IN no es una Promise; envolverla rompe Carta con NOT_TAGGED_CALL
+    const result = runQuery(args);
 
     if (result == null || typeof result.then !== "function") {
       return result;

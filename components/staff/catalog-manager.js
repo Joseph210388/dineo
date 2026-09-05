@@ -1,12 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   createCatalogItemAction,
   deleteCatalogItemAction,
   updateCatalogItemAction,
 } from "../../backend/actions/staff";
+import SearchInput from "../search-input/search-input";
+import ShowMoreButton from "../show-more-button/show-more-button";
+import { matchesSearch, TABLE_PAGE_SIZE } from "../../lib/search-text";
+import { usePagedList } from "../../lib/use-paged-list";
 
 export default function CatalogManager({ kind, title, description, items }) {
   const router = useRouter();
@@ -14,6 +18,13 @@ export default function CatalogManager({ kind, title, description, items }) {
   const [error, setError] = useState("");
   const [editingId, setEditingId] = useState("");
   const [editingName, setEditingName] = useState("");
+  const [query, setQuery] = useState("");
+
+  const filtered = useMemo(() => {
+    return items.filter((item) => matchesSearch(item.name, query));
+  }, [items, query]);
+
+  const page = usePagedList(filtered, TABLE_PAGE_SIZE);
 
   async function handleCreate(event) {
     event.preventDefault();
@@ -76,9 +87,23 @@ export default function CatalogManager({ kind, title, description, items }) {
       </form>
       {error ? <p className="mt-2 text-sm text-red-700">{error}</p> : null}
 
+      {items.length > 0 ? (
+        <div className="mt-6 max-w-xl">
+          <SearchInput
+            value={query}
+            onChange={setQuery}
+            label={`Buscar ${title.toLowerCase()}`}
+            placeholder="Nombre"
+          />
+          <p className="mt-2 text-sm text-stone-500">
+            {page.total} coinciden · se ven {page.visible.length}
+          </p>
+        </div>
+      ) : null}
+
       <ul className="mt-6 divide-y divide-stone-100 overflow-hidden rounded-2xl border border-stone-200 bg-white">
-        {items.length ? (
-          items.map((item) => (
+        {page.total ? (
+          page.visible.map((item) => (
             <li key={item.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
               {editingId === item.id ? (
                 <form onSubmit={handleUpdate} className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row">
@@ -120,9 +145,12 @@ export default function CatalogManager({ kind, title, description, items }) {
             </li>
           ))
         ) : (
-          <li className="px-4 py-8 text-center text-sm text-stone-500">Todavía no hay ninguno.</li>
+          <li className="px-4 py-8 text-center text-sm text-stone-500">
+            {items.length ? "Nada coincide con esa búsqueda." : "Todavía no hay ninguno."}
+          </li>
         )}
       </ul>
+      <ShowMoreButton remaining={page.remaining} onClick={page.showMore} />
     </main>
   );
 }

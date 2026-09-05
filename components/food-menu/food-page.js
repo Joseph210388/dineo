@@ -10,9 +10,12 @@ import DishCatalog from "../dish-popup/dish-catalog";
 import FoodFilters from "./food-filters";
 import FilterChipList from "../filter-chip/filter-chip";
 import ViewToggle from "../view-toggle/view-toggle";
+import ShowMoreButton from "../show-more-button/show-more-button";
 import { PRICE_ORDERS } from "../../lib/filter-dishes";
 import { isStaffRole } from "../../lib/roles";
+import { MENU_PAGE_SIZE } from "../../lib/search-text";
 import { useDishFilters } from "../../lib/use-dish-filters";
+import { usePagedList } from "../../lib/use-paged-list";
 
 const VIEW_STORAGE_KEY = "taipei_food_view";
 
@@ -22,6 +25,7 @@ export default function FoodPage({ dishes }) {
   const [fechaActual] = useState(() => new Date());
   const [viewMode, setViewMode] = useState("grid");
   const filters = useDishFilters(dishes);
+  const page = usePagedList(filters.visibleDishes, MENU_PAGE_SIZE);
 
   useEffect(() => {
     const savedView = window.localStorage.getItem(VIEW_STORAGE_KEY);
@@ -87,7 +91,8 @@ export default function FoodPage({ dishes }) {
                     Platillos disponibles
                   </h2>
                   <p className="mt-1 text-sm text-stone-500">
-                    {filters.visibleDishes.length} de {dishes.length} en la mesa
+                    Se ven {page.visible.length} de {filters.visibleDishes.length} coincidencias
+                    {filters.visibleDishes.length !== dishes.length ? ` · ${dishes.length} en la carta` : ""}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -128,14 +133,17 @@ export default function FoodPage({ dishes }) {
             <DishCatalog dishes={dishes}>
               {(openDish) =>
                 filters.visibleDishes.length ? (
-                  <div
-                    className={
-                      viewMode === "list" ? "grid grid-cols-1 gap-3" : DISH_CARD_GRID_CLASS
-                    }
-                  >
-                    {filters.visibleDishes.map((dish) => (
-                      <DishCard key={dish._id} dish={dish} onOpen={openDish} variant={viewMode} />
-                    ))}
+                  <div>
+                    <div
+                      className={
+                        viewMode === "list" ? "grid grid-cols-1 gap-3" : DISH_CARD_GRID_CLASS
+                      }
+                    >
+                      {page.visible.map((dish) => (
+                        <DishCard key={dish._id} dish={dish} onOpen={openDish} variant={viewMode} />
+                      ))}
+                    </div>
+                    <ShowMoreButton remaining={page.remaining} onClick={page.showMore} />
                   </div>
                 ) : (
                   <div className="rounded-2xl border border-dashed border-red-900/20 bg-white/70 px-6 py-14 text-center">

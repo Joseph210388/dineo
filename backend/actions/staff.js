@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { sql } from "../db";
 import { requireAdmin, requireStaff } from "../auth";
 import { DEFAULT_PAYMENT_METHOD, isPaymentMethod } from "../../lib/payment-methods";
+import { STAFF_RESERVATIONS_FETCH_LIMIT } from "../../lib/search-text";
 import {
   listCatalogAllergens,
   listCatalogIngredients,
@@ -264,9 +265,22 @@ export async function deleteDishAction(formData) {
   return { ok: true };
 }
 
-export async function listStaffReservations() {
-  await requireStaff();
+function mapReservationListRow(row) {
+  return {
+    id: String(row.id),
+    date: toDateText(row.reservation_date),
+    time: String(row.reservation_time).slice(0, 5),
+    people: row.number_of_people,
+    total: Number(row.total_price),
+    status: row.status,
+    notes: row.notes,
+    paymentMethod: row.payment_method || DEFAULT_PAYMENT_METHOD,
+    guestName: `${row.first_name} ${row.last_name}`,
+    guestEmail: row.email,
+  };
+}
 
+async function loadRecentReservationList() {
   const reservations = await sql`
     select
       reservations.id,
@@ -283,20 +297,15 @@ export async function listStaffReservations() {
     from reservations
     inner join users on users.id = reservations.user_id
     order by reservations.reservation_date desc, reservations.reservation_time desc
+    limit ${STAFF_RESERVATIONS_FETCH_LIMIT}
   `;
 
-  return reservations.map((row) => ({
-    id: String(row.id),
-    date: toDateText(row.reservation_date),
-    time: String(row.reservation_time).slice(0, 5),
-    people: row.number_of_people,
-    total: Number(row.total_price),
-    status: row.status,
-    notes: row.notes,
-    paymentMethod: row.payment_method || DEFAULT_PAYMENT_METHOD,
-    guestName: `${row.first_name} ${row.last_name}`,
-    guestEmail: row.email,
-  }));
+  return reservations.map(mapReservationListRow);
+}
+
+export async function listStaffReservations() {
+  await requireStaff();
+  return loadRecentReservationList();
 }
 
 export async function getStaffReservation(id) {
@@ -408,23 +417,7 @@ export async function listStaffCustomers() {
 export async function getStaffReservationsPageData() {
   await requireStaff();
 
-  const reservationRows = await sql`
-    select
-      reservations.id,
-      reservations.reservation_date,
-      reservations.reservation_time,
-      reservations.number_of_people,
-      reservations.total_price,
-      reservations.status,
-      reservations.notes,
-      reservations.payment_method,
-      users.first_name,
-      users.last_name,
-      users.email
-    from reservations
-    inner join users on users.id = reservations.user_id
-    order by reservations.reservation_date desc, reservations.reservation_time desc
-  `;
+  const reservations = await loadRecentReservationList();
 
   const customerRows = await sql`
     select id, email, first_name, last_name
@@ -441,18 +434,7 @@ export async function getStaffReservationsPageData() {
   `;
 
   return {
-    reservations: reservationRows.map((row) => ({
-      id: String(row.id),
-      date: toDateText(row.reservation_date),
-      time: String(row.reservation_time).slice(0, 5),
-      people: row.number_of_people,
-      total: Number(row.total_price),
-      status: row.status,
-      notes: row.notes,
-      paymentMethod: row.payment_method || DEFAULT_PAYMENT_METHOD,
-      guestName: `${row.first_name} ${row.last_name}`,
-      guestEmail: row.email,
-    })),
+    reservations,
     customers: customerRows.map((row) => ({
       id: String(row.id),
       email: row.email,
