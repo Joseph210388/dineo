@@ -4,6 +4,7 @@ import { useState } from "react";
 import { addDishToCart } from "../../backend/actions/cart";
 import { useAuth } from "../auth-provider";
 import { useAuthModal } from "../auth-modal/auth-modal-provider";
+import { isStaffRole } from "../../lib/roles";
 
 export default function AddToCartButton({ dishId, variant = "card" }) {
   const { user, isLoaded } = useAuth();
@@ -19,6 +20,11 @@ export default function AddToCartButton({ dishId, variant = "card" }) {
     // Sin cuenta no hay carrito: primero entrar o registrarse
     if (!user) {
       openAuth({ mode: "sign-in", reason: "cart" });
+      return;
+    }
+
+    if (isStaffRole(user.role)) {
+      setMessage("El personal reserva en el panel, no desde la carta.");
       return;
     }
 

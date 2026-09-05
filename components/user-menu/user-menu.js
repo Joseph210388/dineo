@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { HiOutlineHeart, HiOutlineLogout, HiOutlineClock, HiOutlineUser } from "react-icons/hi";
+import { HiOutlineHeart, HiOutlineLogout, HiOutlineClock, HiOutlineUser, HiOutlineHome } from "react-icons/hi";
 import { useAuth } from "../auth-provider";
 import { useAuthModal } from "../auth-modal/auth-modal-provider";
 import { signOutAction } from "../../backend/actions/user";
+import { isStaffRole } from "../../lib/roles";
 
 function userInitials(user) {
   return `${user.firstName?.[0] || ""}${user.lastName?.[0] || ""}`.toUpperCase() || "U";
@@ -98,17 +99,28 @@ export default function UserMenu() {
                   <p className="truncate text-sm font-semibold text-stone-900">
                     {user.firstName} {user.lastName}
                   </p>
-                  <p className="truncate text-xs text-stone-500">{user.email}</p>
+                  <p className="truncate text-xs text-stone-500">
+                    {isStaffRole(user.role) ? "Cuenta de trabajo" : user.email}
+                  </p>
                 </div>
               </div>
-              <MenuLink href="/favorites" onClick={() => setIsOpen(false)}>
-                <HiOutlineHeart className="h-4 w-4 text-red-800" />
-                Favoritos
-              </MenuLink>
-              <MenuLink href="/reservation" onClick={() => setIsOpen(false)}>
-                <HiOutlineClock className="h-4 w-4 text-red-800" />
-                Histórico
-              </MenuLink>
+              {isStaffRole(user.role) ? (
+                <MenuLink href="/staff" onClick={() => setIsOpen(false)}>
+                  <HiOutlineHome className="h-4 w-4 text-red-800" />
+                  Ir al panel
+                </MenuLink>
+              ) : (
+                <>
+                  <MenuLink href="/favorites" onClick={() => setIsOpen(false)}>
+                    <HiOutlineHeart className="h-4 w-4 text-red-800" />
+                    Favoritos
+                  </MenuLink>
+                  <MenuLink href="/reservation" onClick={() => setIsOpen(false)}>
+                    <HiOutlineClock className="h-4 w-4 text-red-800" />
+                    Histórico
+                  </MenuLink>
+                </>
+              )}
               <button
                 type="button"
                 onClick={handleLogout}

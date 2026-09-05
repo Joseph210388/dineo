@@ -17,11 +17,13 @@ import {
   getDishCategories,
   toggleSelection,
 } from "../../lib/filter-dishes";
+import { isStaffRole } from "../../lib/roles";
 
 const VIEW_STORAGE_KEY = "taipei_food_view";
 
 export default function FoodPage({ dishes }) {
   const { user } = useAuth();
+  const customer = user && !isStaffRole(user.role) ? user : null;
   const [fechaActual] = useState(() => new Date());
   const [areFiltersOpen, setAreFiltersOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -93,10 +95,10 @@ export default function FoodPage({ dishes }) {
             <span className="h-px flex-1 bg-red-800/40" />
             <h1 className="max-w-[18ch] text-[clamp(1.5rem,4vw,2.25rem)] font-semibold leading-tight text-stone-900 sm:max-w-none">
               Selecciona tus platillos
-              {user ? (
+              {customer ? (
                 <span className="text-red-800">
                   {" "}
-                  {user.firstName} {user.lastName}
+                  {customer.firstName} {customer.lastName}
                 </span>
               ) : null}
             </h1>
@@ -159,7 +161,7 @@ export default function FoodPage({ dishes }) {
                 <FilterChipList tags={tags} onRemove={removeTag} onClear={tags.length ? clearFilters : undefined} />
               </div>
 
-              {!user ? (
+              {!customer ? (
                 <p className="text-sm text-stone-500">
                   Mira la carta sin cuenta. Para pedir, entra o regístrate.
                 </p>

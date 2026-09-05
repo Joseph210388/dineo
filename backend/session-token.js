@@ -1,12 +1,9 @@
 import { jwtVerify } from "jose";
 import { STAFF_HOME_PATH, STAFF_LOGIN_PATH, isInternalStaffPath } from "../lib/staff-paths";
+import { isStaffRole } from "../lib/roles";
 
 export const SESSION_COOKIE = "taipei_session";
-export { STAFF_HOME_PATH, STAFF_LOGIN_PATH, isInternalStaffPath };
-
-export function isStaffRole(role) {
-  return role === "employee" || role === "admin";
-}
+export { STAFF_HOME_PATH, STAFF_LOGIN_PATH, isInternalStaffPath, isStaffRole };
 
 export function getSessionSecretKey() {
   const secret = process.env.SESSION_SECRET;

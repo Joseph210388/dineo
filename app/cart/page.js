@@ -4,6 +4,8 @@ import React, { useEffect, useState } from "react";
 import { getCartItems, deleteCartItem, deleteAllCartItems} from "../../backend/actions/cart";
 import { useAuth } from "../../components/auth-provider";
 import {createReservation} from "../../backend/actions/reservation";
+import PaymentMethodPicker from "../../components/payment-method-picker/payment-method-picker";
+import { DEFAULT_PAYMENT_METHOD } from "../../lib/payment-methods";
 
 export default function Cart() {
     const [cartItems, setCartItems] = useState([]);
@@ -13,10 +15,7 @@ export default function Cart() {
     const [reservationDate, setReservationDate] = useState('');
     const [reservationTime, setReservationTime] = useState('');
     const [numberOfPeople, setNumberOfPeople] = useState(1);
-    const [cardName, setCardName] = useState('');
-    const [cardNumber, setCardNumber] = useState('');
-    const [expirationDate, setExpirationDate] = useState('');
-    const [securityCode, setSecurityCode] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState(DEFAULT_PAYMENT_METHOD);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isFormValid, setIsFormValid] = useState(false);
     
@@ -73,9 +72,9 @@ export default function Cart() {
 
     // Verificar si todos los campos del formulario están completos
     useEffect(() => {
-        const isFormComplete = reservationDate && reservationTime && numberOfPeople && cardName && cardNumber && expirationDate && securityCode;
+        const isFormComplete = reservationDate && reservationTime && numberOfPeople;
         setIsFormValid(isFormComplete);
-    }, [reservationDate, reservationTime, numberOfPeople, cardName, cardNumber, expirationDate, securityCode]);
+    }, [reservationDate, reservationTime, numberOfPeople]);
 
     const handleDeleteItem = (itemId) => {
         try {
@@ -100,7 +99,8 @@ export default function Cart() {
                 totalPrice,
                 reservationDate,
                 reservationTime,
-                numberOfPeople
+                numberOfPeople,
+                paymentMethod
             );
             console.log('Reserva creada:', reservation);
         } catch (error) {
@@ -216,54 +216,7 @@ export default function Cart() {
                         </div>
                         <p className="text-red-700 text-sm">Horario disponible: 12:00 - 23:59</p>
                         <hr className="w-full h-0.5 bg-gray-300 my-2"/>
-                        <div className="flex flex-col">
-                            <label htmlFor="cardName" className="font-bold">Nombre del Propietario:</label>
-                            <input
-                                className="w-100 h-6 p-2 rounded"
-                                type="text"
-                                id="cardName"
-                                value={cardName}
-                                onChange={(e) => setCardName(e.target.value)}
-                                required
-                            />
-                        </div>
-                        <div className="flex flex-col">
-                            <label htmlFor="cardNumber" className="font-bold">Número de Tarjeta:</label>
-                            <input
-                                className="w-100 h-6 p-2 rounded"
-                                type="number"
-                                id="cardNumber"
-                                value={cardNumber}
-                                onChange={(e) => setCardNumber(e.target.value)}
-                                required
-                            />
-                        </div>
-                        <div className="flex gap-2">
-                            <div className="flex flex-col gap-2">
-                                <label htmlFor="expirationDate" className="font-bold">Fecha de Caducidad:</label>
-                                <input
-                                    className="w-fit h-6 rounded p-2"
-                                    type="month"
-                                    id="expirationDate"
-                                    value={expirationDate}
-                                    onChange={(e) => setExpirationDate(e.target.value)}
-                                    required
-                                />
-                            </div>
-                            <div className="flex flex-col gap-2">
-                                <label htmlFor="securityCode" className="font-bold">CVV:</label>
-                                <input
-                                    className="w-12 h-6 rounded p-2"
-                                    type="text"
-                                    id="securityCode"
-                                    pattern="\d{3}"
-                                    maxLength="3"
-                                    value={securityCode}
-                                    onChange={(e) => setSecurityCode(e.target.value)}
-                                    required
-                                />
-                            </div>
-                        </div>
+                        <PaymentMethodPicker value={paymentMethod} onChange={setPaymentMethod} />
                         <hr className="w-full h-0.5 bg-gray-300 my-2"/>
                         <p className="text-xl font-medium">Precio Total: {totalPrice}€</p>
                         <button
@@ -272,7 +225,7 @@ export default function Cart() {
                             onClick={handlePaymentClick}
                             disabled={!isFormValid || isSubmitting}
                         >
-                            {isSubmitting ? 'Reserva Hecha' : 'Pagar'}
+                            {isSubmitting ? 'Reserva Hecha' : paymentMethod === 'local' ? 'Reservar (pago en el local)' : 'Reservar (demo)'}
                         </button>
                     </form>
                 </div>

@@ -93,6 +93,14 @@ export async function requireUser() {
   return user;
 }
 
+export async function requireCustomer() {
+  const user = await requireUser();
+  if (isStaffRole(user.role)) {
+    throw new Error("El personal reserva desde el panel, no desde la web del restaurante");
+  }
+  return user;
+}
+
 export async function registerUser({ email, password, firstName, lastName }) {
   const cleanEmail = String(email || "").trim().toLowerCase();
   const cleanFirst = String(firstName || "").trim();
@@ -142,6 +150,9 @@ async function authenticateUser({ email, password }) {
 
 export async function loginUser({ email, password }) {
   const user = await authenticateUser({ email, password });
+  if (isStaffRole(user.role)) {
+    throw new Error("Esta cuenta es del personal. Entra por Acceso personal.");
+  }
   await createSession(user);
   return toPublicUser(user);
 }

@@ -38,6 +38,18 @@ export async function middleware(request: NextRequest) {
     return continueWithPath(request);
   }
 
+  // El personal no pide desde la web pública: carrito e histórico van al panel
+  if (
+    session &&
+    isStaffRole(String(session.role || "")) &&
+    (pathname === "/cart" ||
+      pathname === "/favorites" ||
+      pathname === "/reservation" ||
+      pathname.startsWith("/reservation/"))
+  ) {
+    return NextResponse.redirect(new URL("/staff/reservations", request.url));
+  }
+
   if (isPublicPath(pathname)) {
     return continueWithPath(request);
   }

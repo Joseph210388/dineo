@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { signInAction, signUpAction } from "../../backend/actions/user";
 import { useAuth } from "../auth-provider";
+import PasswordInput from "../password-input/password-input";
 
 const fieldClass =
-  "mt-1 w-full rounded-lg border border-stone-300 p-3 text-stone-900 outline-none focus:border-red-700 focus:ring-4 focus:ring-red-700/15";
+  "w-full rounded-lg border border-stone-300 p-3 text-stone-900 outline-none focus:border-red-700 focus:ring-4 focus:ring-red-700/15";
 
 function reasonCopy(reason, mode) {
   if (reason === "cart") {
@@ -92,7 +93,7 @@ export default function AuthForms({ mode, onModeChange, reason = "", onSuccess }
           <label className="mt-5 block text-sm font-medium text-stone-800">
             Email
             <input
-              className={fieldClass}
+              className={`mt-1 ${fieldClass}`}
               name="email"
               type="email"
               required={!isSignUp}
@@ -103,10 +104,9 @@ export default function AuthForms({ mode, onModeChange, reason = "", onSuccess }
 
           <label className="mt-4 block text-sm font-medium text-stone-800">
             Contraseña
-            <input
+            <PasswordInput
               className={fieldClass}
               name="password"
-              type="password"
               required={!isSignUp}
               minLength={8}
               autoComplete="current-password"
@@ -123,6 +123,12 @@ export default function AuthForms({ mode, onModeChange, reason = "", onSuccess }
           >
             {isSubmitting && !isSignUp ? "Entrando..." : "Entrar"}
           </button>
+          <p className="mt-3 text-center text-xs text-stone-500">
+            ¿Trabajas en Taipei?{" "}
+            <a href="/acceso-personal" className="font-medium text-red-800 hover:underline">
+              Acceso personal
+            </a>
+          </p>
         </form>
 
         <form
@@ -138,7 +144,7 @@ export default function AuthForms({ mode, onModeChange, reason = "", onSuccess }
             <label className="block text-sm font-medium text-stone-800">
               Nombre
               <input
-                className={fieldClass}
+                className={`mt-1 ${fieldClass}`}
                 name="firstName"
                 type="text"
                 required={isSignUp}
@@ -149,7 +155,7 @@ export default function AuthForms({ mode, onModeChange, reason = "", onSuccess }
             <label className="block text-sm font-medium text-stone-800">
               Apellidos
               <input
-                className={fieldClass}
+                className={`mt-1 ${fieldClass}`}
                 name="lastName"
                 type="text"
                 required={isSignUp}
@@ -162,7 +168,7 @@ export default function AuthForms({ mode, onModeChange, reason = "", onSuccess }
           <label className="mt-4 block text-sm font-medium text-stone-800">
             Email
             <input
-              className={fieldClass}
+              className={`mt-1 ${fieldClass}`}
               name="email"
               type="email"
               required={isSignUp}
@@ -173,10 +179,9 @@ export default function AuthForms({ mode, onModeChange, reason = "", onSuccess }
 
           <label className="mt-4 block text-sm font-medium text-stone-800">
             Contraseña (mínimo 8)
-            <input
+            <PasswordInput
               className={fieldClass}
               name="password"
-              type="password"
               required={isSignUp}
               minLength={8}
               autoComplete="new-password"

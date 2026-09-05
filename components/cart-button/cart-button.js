@@ -4,10 +4,15 @@ import Link from "next/link";
 import { HiOutlineShoppingCart } from "react-icons/hi";
 import { useAuth } from "../auth-provider";
 import { useAuthModal } from "../auth-modal/auth-modal-provider";
+import { isStaffRole } from "../../lib/roles";
 
 export default function CartButton() {
   const { user } = useAuth();
   const { openAuth } = useAuthModal();
+
+  if (user && isStaffRole(user.role)) {
+    return null;
+  }
 
   if (!user) {
     return (

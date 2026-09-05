@@ -5,7 +5,7 @@ import {
   getStaffReservation,
   updateReservationStatusAction,
 } from "../../../../backend/actions/staff";
-import { formatDate, formatMoney } from "../../../../backend/staff-format";
+import { formatDate, formatMoney, paymentMethodLabel } from "../../../../backend/staff-format";
 import { ReservationBadge } from "../../../../components/staff/status-badge";
 import ConfirmForm from "../../../../components/staff/confirm-form";
 
@@ -49,7 +49,7 @@ export default async function StaffReservationDetailPage({ params }) {
         <article className="rounded-2xl border border-stone-200 bg-white p-4">
           <p className="text-xs font-medium uppercase tracking-wide text-stone-500">Total</p>
           <p className="mt-2 text-2xl text-stone-900">{formatMoney(reservation.total)}</p>
-          <p className="text-xs text-stone-500">Suma de los platos pedidos</p>
+          <p className="text-xs text-stone-500">{paymentMethodLabel(reservation.paymentMethod)}</p>
         </article>
       </section>
 

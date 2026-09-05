@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signInStaffAction } from "../../backend/actions/user";
+import PasswordInput from "../../components/password-input/password-input";
 
 export default function StaffSignInPage() {
   const router = useRouter();
@@ -53,14 +54,14 @@ export default function StaffSignInPage() {
         <label className="mt-4 block text-sm font-medium text-stone-200" htmlFor="password">
           Contraseña
         </label>
-        <input
+        <PasswordInput
           id="password"
           name="password"
-          type="password"
           required
           minLength={5}
           autoComplete="current-password"
-          className="mt-1 w-full rounded-lg border border-stone-600 bg-stone-900 p-3 text-white outline-none focus:border-red-500"
+          tone="dark"
+          className="rounded-lg border border-stone-600 bg-stone-900 p-3 text-white outline-none focus:border-red-500"
         />
 
         {error ? <p className="mt-4 text-sm text-red-400">{error}</p> : null}

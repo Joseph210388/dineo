@@ -40,6 +40,15 @@ export function reservationStatusLabel(status) {
   return labels[status] || status;
 }
 
+export function paymentMethodLabel(value) {
+  const labels = {
+    local: "Pago en el local",
+    card: "Tarjeta (demo)",
+    bizum: "Bizum (demo)",
+  };
+  return labels[value] || labels.local;
+}
+
 export function userRoleLabel(role) {
   const labels = {
     customer: "Cliente",

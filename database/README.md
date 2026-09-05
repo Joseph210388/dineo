@@ -25,6 +25,7 @@ Una base que ya existe = el siguiente `.sql` de `migrations/`, y luego actualiza
 - Migraciones ya aplicadas en ese proyecto:
   1. `20260904231251_dish_popup_details`
   2. `20260905001016_add_ingredient_allergen_catalogs`
+  3. `20260905180000_reservation_payment_method`
 
 La primera instalación (usuarios, platos, carrito, reservas) se hizo a mano el 2026-09-03/04. Quedó reconstruida en `migrations/20260903_initial_public_schema.sql`.
 
@@ -74,3 +75,4 @@ pg_dump --schema=public --data-only --no-owner --no-privileges ^
 - **2026-09-03** — Proyecto Supabase `taipei`. Tablas: users, sessions, dishes, dish_ingredients, carts, cart_items, reservations, reservation_items.
 - **2026-09-04** — `recommendation` en dishes; tablas `dish_allergens` y `dish_images`.
 - **2026-09-05** — Catálogos `ingredients` y `allergens` + tablas de enlace. Las tablas viejas de nombres sueltos se dejan, pero la app ya no las usa.
+- **2026-09-05** — `reservations.payment_method`: `local` (por defecto), `card` y `bizum` (demo, sin cobro real).

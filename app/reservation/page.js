@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../components/auth-provider";
 import { getReservationsByUser } from "../../backend/actions/reservation";
+import { paymentMethodLabel } from "../../lib/payment-methods";
 
 export default function Reservation(){
 
@@ -74,7 +75,8 @@ export default function Reservation(){
                                                     </div>
                                                 </div>
                                                 <hr></hr>
-                                                <div className="flex justify-end">
+                                                <div className="flex justify-end gap-4">
+                                                    <p className="font-bold">Pago: </p><span>{paymentMethodLabel(reservation.paymentMethod)}</span>
                                                     <p className="font-bold">Precio: </p><span>{reservation.total_price}€</span>
                                                 </div>
                                             </div>

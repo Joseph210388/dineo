@@ -19,18 +19,18 @@ export default function CheckboxFilterGroup({
   return (
     <section>
       {title ? (
-        <h3 className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-stone-500">
+        <h3 className="mb-1 text-xs font-semibold uppercase tracking-[0.16em] text-stone-500">
           {title}
         </h3>
       ) : null}
-      <div className="space-y-1">
+      <div>
         {visibleOptions.map((option) => {
           const isChecked = selectedIds.includes(option.id);
 
           return (
             <label
               key={option.id}
-              className="flex min-h-10 cursor-pointer items-center gap-3 rounded-xl px-2 py-1.5 text-sm text-stone-700 hover:bg-amber-50"
+              className="flex min-h-8 cursor-pointer items-center gap-2 rounded-lg px-1.5 py-1 text-sm text-stone-700 hover:bg-amber-50"
             >
               <input
                 type="checkbox"

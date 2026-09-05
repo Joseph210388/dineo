@@ -57,10 +57,16 @@ export default function Popup({
   ) : null;
 
   return (
-    <div className={`fixed inset-0 ${zClass} flex items-end justify-center bg-stone-900/40 p-0 sm:items-center sm:p-4`}>
-      <button type="button" className="absolute inset-0" aria-label="Cerrar" onClick={onClose} />
+    <div className={`fixed inset-0 ${zClass} flex items-end justify-center p-0 sm:items-center sm:p-4`}>
+      <button
+        type="button"
+        className="absolute inset-0 bg-stone-900/40 motion-reduce:animate-none animate-backdrop-in"
+        aria-label="Cerrar"
+        onClick={onClose}
+      />
+      {/* Solo transform/opacity: el navegador lo pinta en GPU y no recalcula el layout */}
       <div
-        className={`relative z-10 max-h-[94svh] w-full overflow-y-auto rounded-t-3xl bg-white text-stone-900 sm:rounded-3xl ${maxWidthClass} ${panelClassName}`}
+        className={`relative z-10 max-h-[94svh] w-full overflow-y-auto rounded-t-3xl bg-white text-stone-900 motion-reduce:animate-none max-sm:animate-sheet-in sm:animate-sheet-in-desk sm:rounded-3xl ${maxWidthClass} ${panelClassName}`}
       >
         {closePosition === "bar" && closeButton ? <div className="mb-3 flex justify-end">{closeButton}</div> : null}
         {closePosition === "overlay" ? closeButton : null}

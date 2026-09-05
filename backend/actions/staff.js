@@ -4,6 +4,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { sql } from "../db";
 import { requireAdmin, requireStaff } from "../auth";
+import { DEFAULT_PAYMENT_METHOD, isPaymentMethod } from "../../lib/payment-methods";
 import {
   listCatalogAllergens,
   listCatalogIngredients,
@@ -254,6 +255,7 @@ export async function listStaffReservations() {
       reservations.total_price,
       reservations.status,
       reservations.notes,
+      reservations.payment_method,
       users.first_name,
       users.last_name,
       users.email
@@ -270,6 +272,7 @@ export async function listStaffReservations() {
     total: Number(row.total_price),
     status: row.status,
     notes: row.notes,
+    paymentMethod: row.payment_method || DEFAULT_PAYMENT_METHOD,
     guestName: `${row.first_name} ${row.last_name}`,
     guestEmail: row.email,
   }));
@@ -288,6 +291,7 @@ export async function getStaffReservation(id) {
       reservations.status,
       reservations.notes,
       reservations.created_at,
+      reservations.payment_method,
       users.id as user_id,
       users.first_name,
       users.last_name,
@@ -317,6 +321,7 @@ export async function getStaffReservation(id) {
     total: Number(row.total_price),
     status: row.status,
     notes: row.notes,
+    paymentMethod: row.payment_method || DEFAULT_PAYMENT_METHOD,
     createdAt: row.created_at,
     userId: String(row.user_id),
     guestName: `${row.first_name} ${row.last_name}`,
@@ -360,6 +365,100 @@ export async function deleteReservationAction(formData) {
   await sql`delete from reservations where id = ${id}`;
   refreshStaff();
   redirect("/staff/reservations");
+}
+
+export async function listStaffCustomers() {
+  await requireStaff();
+
+  const customers = await sql`
+    select id, email, first_name, last_name
+    from users
+    where role = 'customer' and is_active = true
+    order by first_name, last_name
+  `;
+
+  return customers.map((row) => ({
+    id: String(row.id),
+    email: row.email,
+    name: `${row.first_name} ${row.last_name}`,
+  }));
+}
+
+export async function createStaffReservationAction(formData) {
+  await requireStaff();
+
+  const customerId = Number(formData.get("customerId"));
+  const reservationDate = String(formData.get("date") || "");
+  const reservationTime = String(formData.get("time") || "");
+  const numberOfPeople = Number(formData.get("people") || 0);
+  const notes = String(formData.get("notes") || "").trim();
+  const paymentMethod = isPaymentMethod(String(formData.get("paymentMethod") || ""))
+    ? String(formData.get("paymentMethod"))
+    : DEFAULT_PAYMENT_METHOD;
+
+  if (!customerId || !reservationDate || !reservationTime || numberOfPeople < 1) {
+    return { ok: false, message: "Faltan cliente, fecha, hora o personas" };
+  }
+
+  const [customer] = await sql`
+    select id from users where id = ${customerId} and role = 'customer' and is_active = true limit 1
+  `;
+  if (!customer) {
+    return { ok: false, message: "Ese cliente no existe" };
+  }
+
+  const dishes = await sql`
+    select id, name, price from dishes where is_available = true
+  `;
+
+  const lines = [];
+  for (const dish of dishes) {
+    const quantity = Number(formData.get(`qty_${dish.id}`) || 0);
+    if (quantity > 0) {
+      lines.push({
+        id: dish.id,
+        name: dish.name,
+        price: Number(dish.price),
+        quantity,
+      });
+    }
+  }
+
+  const totalPrice = lines.reduce((sum, line) => sum + line.price * line.quantity, 0);
+
+  const [reservation] = await sql`
+    insert into reservations (
+      user_id,
+      reservation_date,
+      reservation_time,
+      number_of_people,
+      total_price,
+      status,
+      notes,
+      payment_method
+    )
+    values (
+      ${customer.id},
+      ${reservationDate},
+      ${reservationTime},
+      ${numberOfPeople},
+      ${totalPrice},
+      'confirmed',
+      ${notes || null},
+      ${paymentMethod}
+    )
+    returning id
+  `;
+
+  for (const line of lines) {
+    await sql`
+      insert into reservation_items (reservation_id, dish_id, dish_name, quantity, unit_price)
+      values (${reservation.id}, ${line.id}, ${line.name}, ${line.quantity}, ${line.price})
+    `;
+  }
+
+  refreshStaff();
+  return { ok: true, id: String(reservation.id) };
 }
 
 export async function listStaffUsers() {

@@ -1,7 +1,7 @@
 "use server";
 
 import { sql } from "../db";
-import { requireUser } from "../auth";
+import { requireCustomer, requireUser } from "../auth";
 
 async function getOrCreateCartId(userId) {
   const [existing] = await sql`select id from carts where user_id = ${userId} limit 1`;
@@ -59,7 +59,7 @@ export async function getCartItems() {
 }
 
 export async function addDishToCart(_userId, _cartId, dishId) {
-  const user = await requireUser();
+  const user = await requireCustomer();
   const cartId = await getOrCreateCartId(user.id);
 
   const [dish] = await sql`

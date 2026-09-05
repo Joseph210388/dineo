@@ -168,12 +168,16 @@ create table if not exists reservations (
   total_price numeric(10, 2) not null default 0,
   status text not null default 'pending',
   notes text,
+  payment_method text not null default 'local',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint reservations_people_positive check (number_of_people > 0),
   constraint reservations_total_non_negative check (total_price >= 0),
   constraint reservations_status_allowed check (
     status in ('pending', 'confirmed', 'cancelled', 'completed')
+  ),
+  constraint reservations_payment_method_allowed check (
+    payment_method in ('local', 'card', 'bizum')
   )
 );
 

@@ -1,8 +1,9 @@
 "use server";
 
 import { sql } from "../db";
-import { requireUser } from "../auth";
+import { requireCustomer } from "../auth";
 import { deleteAllCartItems, getCartItems } from "./cart";
+import { DEFAULT_PAYMENT_METHOD, isPaymentMethod } from "../../lib/payment-methods";
 
 export async function createReservation(
   _userId,
@@ -10,10 +11,12 @@ export async function createReservation(
   totalPrice,
   reservationDate,
   reservationTime,
-  numberOfPeople
+  numberOfPeople,
+  paymentMethod = DEFAULT_PAYMENT_METHOD
 ) {
-  const user = await requireUser();
+  const user = await requireCustomer();
   const items = await getCartItems();
+  const method = isPaymentMethod(paymentMethod) ? paymentMethod : DEFAULT_PAYMENT_METHOD;
 
   if (!items.length) {
     throw new Error("El carrito esta vacio");
@@ -26,7 +29,8 @@ export async function createReservation(
       reservation_time,
       number_of_people,
       total_price,
-      status
+      status,
+      payment_method
     )
     values (
       ${user.id},
@@ -34,9 +38,10 @@ export async function createReservation(
       ${reservationTime},
       ${numberOfPeople},
       ${totalPrice},
-      'confirmed'
+      'confirmed',
+      ${method}
     )
-    returning id, reservation_date, reservation_time, number_of_people, total_price, status
+    returning id, reservation_date, reservation_time, number_of_people, total_price, status, payment_method
   `;
 
   for (const item of items) {
@@ -51,9 +56,9 @@ export async function createReservation(
 }
 
 export async function getReservationsByUser() {
-  const user = await requireUser();
+  const user = await requireCustomer();
   const reservations = await sql`
-    select id, reservation_date, reservation_time, number_of_people, total_price, status
+    select id, reservation_date, reservation_time, number_of_people, total_price, status, payment_method
     from reservations
     where user_id = ${user.id}
     order by reservation_date desc, reservation_time desc
@@ -78,6 +83,7 @@ export async function getReservationsByUser() {
       reservationTime: String(reservation.reservation_time).slice(0, 5),
       numberOfPeople: reservation.number_of_people,
       total_price: Number(reservation.total_price),
+      paymentMethod: reservation.payment_method || DEFAULT_PAYMENT_METHOD,
       dishDetail: dishes.map((dish) => ({
         dishName: dish.dish_name,
         quantity: dish.quantity,
