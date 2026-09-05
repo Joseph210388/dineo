@@ -26,7 +26,7 @@ export default function Reservation(){
 
     return(
         <>
-            <div className="bg-stone-200 min-h-screen p-3 md:p-10">
+            <div className="bg-cream min-h-[calc(100svh-8rem)] p-3 md:p-10">
                 <span className="flex items-center">
                     <span className="h-px flex-1 bg-red-700"></span>
                         <h1 className="text-3xl mb-2 font-semibold px-6">

@@ -3,14 +3,14 @@
 import DishPopup from "./dish-popup";
 import useDishPopup from "./use-dish-popup";
 
-export default function DishCatalog({ dishes, children }) {
+export default function DishCatalog({ dishes, children, showClose = true }) {
   const { selectedDish, openDish, closeDish } = useDishPopup(dishes);
 
   return (
     <div className="contents">
       {children(openDish)}
       {selectedDish ? (
-        <DishPopup dish={selectedDish} onClose={closeDish} onOpenDish={openDish} />
+        <DishPopup dish={selectedDish} onClose={closeDish} onOpenDish={openDish} showClose={showClose} />
       ) : null}
     </div>
   );

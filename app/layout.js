@@ -4,6 +4,7 @@ import "./globals.css";
 import Navbar from "../components/navbar/navbar";
 import Footer from "../components/footer/footer";
 import { AuthProvider } from "../components/auth-provider";
+import { AuthModalProvider } from "../components/auth-modal/auth-modal-provider";
 import { isInternalStaffPath } from "../backend/session-token";
 
 const playfair = Playfair_Display({
@@ -27,11 +28,11 @@ export default async function RootLayout({ children }) {
           {isStaffArea ? (
             children
           ) : (
-            <>
+            <AuthModalProvider>
               <Navbar />
               {children}
               <Footer />
-            </>
+            </AuthModalProvider>
           )}
         </AuthProvider>
       </body>

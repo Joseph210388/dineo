@@ -122,7 +122,7 @@ export default function Cart() {
     };
 
     return(
-        <div className="bg-stone-200 lg:h-screen p-3 md:p-10">
+        <div className="bg-cream p-3 md:p-10">
             <span className="flex items-center">
                 <span className="h-px flex-1 bg-red-700"></span>
                     <h1 className="text-3xl mb-2 font-semibold px-6">

@@ -1,27 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { HiHeart, HiOutlineHeart, HiOutlineX } from "react-icons/hi";
+import { HiHeart, HiOutlineHeart } from "react-icons/hi";
 import { useAuth } from "../auth-provider";
+import { useAuthModal } from "../auth-modal/auth-modal-provider";
 import AddToCartButton from "../addToCartButton/addtocartbutton";
+import Popup from "../popup/popup";
+import { readFavorites, toggleFavoriteId } from "../../lib/favorites";
 
-function favoritesKey(userId) {
-  return `taipei_favorites_${userId}`;
-}
-
-function readFavorites(userId) {
-  try {
-    return JSON.parse(localStorage.getItem(favoritesKey(userId)) || "[]");
-  } catch {
-    return [];
-  }
-}
-
-export default function DishPopup({ dish, onClose, onOpenDish }) {
+export default function DishPopup({ dish, onClose, onOpenDish, showClose = true }) {
   const { user, isLoaded } = useAuth();
-  const router = useRouter();
-  const pathname = usePathname();
+  const { openAuth } = useAuthModal();
   const photos = dish.images?.length ? dish.images : [dish.image];
   const [photoIndex, setPhotoIndex] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
@@ -33,20 +22,7 @@ export default function DishPopup({ dish, onClose, onOpenDish }) {
     } else {
       setIsFavorite(false);
     }
-
-    function onKey(event) {
-      if (event.key === "Escape") {
-        onClose();
-      }
-    }
-
-    document.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
-    };
-  }, [dish.id, onClose, user]);
+  }, [dish.id, user]);
 
   function toggleFavorite() {
     if (!isLoaded) {
@@ -54,28 +30,26 @@ export default function DishPopup({ dish, onClose, onOpenDish }) {
     }
 
     if (!user) {
-      const nextPage = pathname && pathname.startsWith("/") ? pathname : "/food";
-      router.push(`/sign-in?redirect=${encodeURIComponent(nextPage)}&reason=cart`);
+      openAuth({ mode: "sign-in", reason: "cart" });
       return;
     }
 
-    const current = readFavorites(user.id);
-    const dishId = String(dish.id);
-    const next = current.includes(dishId)
-      ? current.filter((id) => id !== dishId)
-      : [...current, dishId];
-
-    localStorage.setItem(favoritesKey(user.id), JSON.stringify(next));
-    setIsFavorite(next.includes(dishId));
+    const next = toggleFavoriteId(user.id, dish.id);
+    setIsFavorite(next.includes(String(dish.id)));
   }
 
   const currentPhoto = photos[photoIndex] || dish.image;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-stone-900/40 p-0 sm:items-center sm:p-4">
-      <button type="button" className="absolute inset-0" aria-label="Cerrar" onClick={onClose} />
-
-      <article className="relative z-10 flex max-h-[94svh] w-full max-w-xl flex-col overflow-y-auto rounded-t-3xl bg-white text-stone-900 sm:max-w-2xl sm:rounded-3xl">
+    <Popup
+      onClose={onClose}
+      showClose={showClose}
+      closePosition="overlay"
+      closeTone="light"
+      maxWidthClass="max-w-xl sm:max-w-2xl"
+      zClass="z-50"
+    >
+      <article>
         <div className="relative">
           <img
             src={currentPhoto}
@@ -83,15 +57,6 @@ export default function DishPopup({ dish, onClose, onOpenDish }) {
             className="h-[36vh] min-h-52 w-full object-cover sm:h-72"
           />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-white via-white/40 to-transparent" />
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-stone-800 shadow-sm sm:right-4 sm:top-4"
-            aria-label="Cerrar"
-          >
-            <HiOutlineX className="h-6 w-6" />
-          </button>
 
           {photos.length > 1 ? (
             <div className="absolute inset-x-0 bottom-4 flex justify-center gap-2">
@@ -190,6 +155,6 @@ export default function DishPopup({ dish, onClose, onOpenDish }) {
           </div>
         </div>
       </article>
-    </div>
+    </Popup>
   );
 }

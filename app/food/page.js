@@ -92,7 +92,7 @@ export default function Food() {
   }
 
   return (
-    <section className="flex-1 bg-[#f3eee6]">
+    <section className="flex-1 bg-cream">
       <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-5 md:px-6 md:py-8 lg:px-8">
         <Slider />
 

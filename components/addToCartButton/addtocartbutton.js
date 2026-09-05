@@ -1,21 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
 import { addDishToCart } from "../../backend/actions/cart";
 import { useAuth } from "../auth-provider";
+import { useAuthModal } from "../auth-modal/auth-modal-provider";
 
 export default function AddToCartButton({ dishId, variant = "card" }) {
   const { user, isLoaded } = useAuth();
-  const router = useRouter();
-  const pathname = usePathname();
+  const { openAuth } = useAuthModal();
   const [isAdding, setIsAdding] = useState(false);
   const [message, setMessage] = useState("");
-
-  function goToSignIn() {
-    const nextPage = pathname && pathname.startsWith("/") ? pathname : "/food";
-    router.push(`/sign-in?redirect=${encodeURIComponent(nextPage)}&reason=cart`);
-  }
 
   async function handleAddToCart() {
     if (!isLoaded) {
@@ -24,7 +18,7 @@ export default function AddToCartButton({ dishId, variant = "card" }) {
 
     // Sin cuenta no hay carrito: primero entrar o registrarse
     if (!user) {
-      goToSignIn();
+      openAuth({ mode: "sign-in", reason: "cart" });
       return;
     }
 

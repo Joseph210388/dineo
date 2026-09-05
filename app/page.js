@@ -104,7 +104,7 @@ export default function Home() {
 
       <section
         id="historia"
-        className="bg-white px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-28"
+        className="bg-cream px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-28"
       >
         <div className="mx-auto grid w-full max-w-6xl grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-16">
           <div className="relative order-2 lg:order-1">
@@ -182,7 +182,7 @@ export default function Home() {
 
       <section
         id="contacto"
-        className="bg-white px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-28"
+        className="bg-cream px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-28"
       >
         <div className="mx-auto w-full max-w-6xl">
           <div className="mx-auto max-w-2xl text-center">

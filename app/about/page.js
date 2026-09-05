@@ -5,10 +5,10 @@ export default function About(){
     return(
         <>
         {/* About */}
-        <div id="about" className="relative bg-white  overflow-hidden ">
+        <div id="about" className="relative bg-cream overflow-hidden ">
             <div className="max-w-7xl mx-auto">
-                <div className="relative z-10 pb-8 bg-white sm:pb-16 md:pb-20 lg:max-w-2xl lg:w-full lg:pb-28 xl:pb-32">
-                    <svg className="hidden lg:block absolute right-0 inset-y-0 h-full w-48 text-white transform translate-x-1/2"
+                <div className="relative z-10 pb-8 bg-cream sm:pb-16 md:pb-20 lg:max-w-2xl lg:w-full lg:pb-28 xl:pb-32">
+                    <svg className="hidden lg:block absolute right-0 inset-y-0 h-full w-48 text-cream transform translate-x-1/2"
                         fill="currentColor" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
                         <polygon points="50,0 100,0 50,100 0,100"></polygon>
                     </svg>
@@ -65,7 +65,7 @@ export default function About(){
             </div>
         </section>
         {/* Galeria */}
-        <div className="bg-white py-6">
+        <div className="bg-cream py-6">
             <div className="flex flex-col items-center mb-2 mt-6 ">
                 <h3 className="md:text-4xl text-2xl text-center font-bold text-stone-900">Galería</h3>
                 <hr className="border-1 w-2/6 border-red-600"/>
