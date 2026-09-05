@@ -1,11 +1,7 @@
-import { headers } from "next/headers";
 import { Playfair_Display } from "next/font/google";
 import "./globals.css";
-import Navbar from "../components/navbar/navbar";
-import Footer from "../components/footer/footer";
 import { AuthProvider } from "../components/auth-provider";
-import { AuthModalProvider } from "../components/auth-modal/auth-modal-provider";
-import { isInternalStaffPath } from "../backend/session-token";
+import SiteChrome from "../components/site-chrome";
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
@@ -17,23 +13,12 @@ export const metadata = {
   description: "Restaurante de comida peruana",
 };
 
-export default async function RootLayout({ children }) {
-  const pathname = (await headers()).get("x-pathname") || "";
-  const isStaffArea = isInternalStaffPath(pathname);
-
+export default function RootLayout({ children }) {
   return (
     <html lang="es" className="scroll-smooth">
       <body className={`${playfair.className} antialiased`}>
         <AuthProvider>
-          {isStaffArea ? (
-            children
-          ) : (
-            <AuthModalProvider>
-              <Navbar />
-              {children}
-              <Footer />
-            </AuthModalProvider>
-          )}
+          <SiteChrome>{children}</SiteChrome>
         </AuthProvider>
       </body>
     </html>

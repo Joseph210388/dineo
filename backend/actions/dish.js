@@ -1,5 +1,6 @@
 "use server";
 
+import { unstable_cache } from "next/cache";
 import { sql } from "../db";
 import { loadDishRelations, relationsForDish } from "../dish-relations";
 
@@ -23,7 +24,7 @@ function mapDish(row, extras = {}) {
   };
 }
 
-export async function getAllDish() {
+async function loadAllDishes() {
   const dishes = await sql`
     select id, name, description, price, image_url, category, stock, recommendation
     from dishes
@@ -47,6 +48,15 @@ export async function getAllDish() {
       }));
     return mapped;
   });
+}
+
+const loadCachedDishes = unstable_cache(loadAllDishes, ["public-dishes"], {
+  revalidate: 60,
+  tags: ["dishes"],
+});
+
+export async function getAllDish() {
+  return loadCachedDishes();
 }
 
 export async function getDishById(id) {

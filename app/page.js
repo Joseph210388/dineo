@@ -46,11 +46,13 @@ export default function Home() {
       <section className="relative isolate min-h-[calc(100svh-4rem)] overflow-hidden text-white">
         <div className="absolute inset-0">
           <video
-            src="https://videos.pexels.com/video-files/2894881/2894881-uhd_3840_2160_24fps.mp4"
+            src="https://videos.pexels.com/video-files/2894881/2894881-hd_1280_720_24fps.mp4"
+            poster="https://images.pexels.com/photos/6937464/pexels-photo-6937464.jpeg?auto=compress&cs=tinysrgb&w=1280"
             autoPlay
             loop
             muted
             playsInline
+            preload="metadata"
             aria-hidden="true"
             className="h-full w-full object-cover object-center"
           ></video>

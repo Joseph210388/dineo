@@ -1,20 +1,11 @@
 import { jwtVerify } from "jose";
+import { STAFF_HOME_PATH, STAFF_LOGIN_PATH, isInternalStaffPath } from "../lib/staff-paths";
 
 export const SESSION_COOKIE = "taipei_session";
-export const STAFF_LOGIN_PATH = "/acceso-personal";
-export const STAFF_HOME_PATH = "/staff";
+export { STAFF_HOME_PATH, STAFF_LOGIN_PATH, isInternalStaffPath };
 
 export function isStaffRole(role) {
   return role === "employee" || role === "admin";
-}
-
-export function isInternalStaffPath(pathname) {
-  return (
-    pathname === STAFF_LOGIN_PATH ||
-    pathname.startsWith(`${STAFF_LOGIN_PATH}/`) ||
-    pathname === STAFF_HOME_PATH ||
-    pathname.startsWith(`${STAFF_HOME_PATH}/`)
-  );
 }
 
 export function getSessionSecretKey() {

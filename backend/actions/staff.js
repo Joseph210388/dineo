@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { sql } from "../db";
 import { requireAdmin, requireStaff } from "../auth";
@@ -55,58 +55,59 @@ function refreshStaff() {
   revalidatePath("/staff/ingredients");
   revalidatePath("/staff/allergens");
   revalidatePath("/food");
+  revalidatePath("/favorites");
+  revalidateTag("dishes");
 }
 
 export async function getDashboardStats() {
   await requireStaff();
 
-  const [money] = await sql`
-    select
-      coalesce(sum(total_price) filter (
-        where status in ('confirmed', 'completed')
-          and reservation_date = current_date
-      ), 0) as today_sales,
-      coalesce(sum(total_price) filter (
-        where status in ('confirmed', 'completed')
-          and reservation_date >= date_trunc('month', current_date)::date
-      ), 0) as month_sales,
-      coalesce(sum(total_price) filter (
-        where status in ('confirmed', 'completed')
-      ), 0) as all_sales,
-      count(*) filter (where status = 'pending') as pending_count,
-      count(*) filter (where reservation_date = current_date) as today_reservations
-    from reservations
-  `;
-
-  const [catalog] = await sql`
-    select
-      count(*) as dish_count,
-      count(*) filter (where is_available = true) as available_dishes
-    from dishes
-  `;
-
-  const [people] = await sql`
-    select
-      count(*) filter (where role = 'customer') as customer_count,
-      count(*) filter (where role in ('employee', 'admin')) as staff_count
-    from users
-    where is_active = true
-  `;
-
-  const recentReservations = await sql`
-    select
-      reservations.id,
-      reservations.reservation_date,
-      reservations.reservation_time,
-      reservations.total_price,
-      reservations.status,
-      users.first_name,
-      users.last_name
-    from reservations
-    inner join users on users.id = reservations.user_id
-    order by reservations.created_at desc
-    limit 6
-  `;
+  const [[money], [catalog], [people], recentReservations] = await Promise.all([
+    sql`
+      select
+        coalesce(sum(total_price) filter (
+          where status in ('confirmed', 'completed')
+            and reservation_date = current_date
+        ), 0) as today_sales,
+        coalesce(sum(total_price) filter (
+          where status in ('confirmed', 'completed')
+            and reservation_date >= date_trunc('month', current_date)::date
+        ), 0) as month_sales,
+        coalesce(sum(total_price) filter (
+          where status in ('confirmed', 'completed')
+        ), 0) as all_sales,
+        count(*) filter (where status = 'pending') as pending_count,
+        count(*) filter (where reservation_date = current_date) as today_reservations
+      from reservations
+    `,
+    sql`
+      select
+        count(*) as dish_count,
+        count(*) filter (where is_available = true) as available_dishes
+      from dishes
+    `,
+    sql`
+      select
+        count(*) filter (where role = 'customer') as customer_count,
+        count(*) filter (where role in ('employee', 'admin')) as staff_count
+      from users
+      where is_active = true
+    `,
+    sql`
+      select
+        reservations.id,
+        reservations.reservation_date,
+        reservations.reservation_time,
+        reservations.total_price,
+        reservations.status,
+        users.first_name,
+        users.last_name
+      from reservations
+      inner join users on users.id = reservations.user_id
+      order by reservations.created_at desc
+      limit 6
+    `,
+  ]);
 
   return {
     todaySales: Number(money.today_sales),

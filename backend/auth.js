@@ -1,5 +1,6 @@
 "use server";
 
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { createHash, randomBytes } from "crypto";
 import bcrypt from "bcryptjs";
@@ -64,7 +65,7 @@ export async function getSessionPayload() {
   return readSessionFromToken(store.get(SESSION_COOKIE)?.value);
 }
 
-export async function getCurrentUser() {
+export const getCurrentUser = cache(async function getCurrentUser() {
   const payload = await getSessionPayload();
   if (!payload?.sub || !payload.sid) {
     return null;
@@ -82,7 +83,7 @@ export async function getCurrentUser() {
   `;
 
   return toPublicUser(row);
-}
+});
 
 export async function requireUser() {
   const user = await getCurrentUser();

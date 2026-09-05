@@ -10,9 +10,14 @@ function createSql() {
     throw new Error("DATABASE_URL no esta definida");
   }
 
+  const isServerless = Boolean(process.env.VERCEL);
+
   return postgres(connectionUrl, {
     ssl: "require",
-    max: 1,
+    // En Vercel cada instancia atiende pocas peticiones; en local varias a la vez se encolaban con max: 1
+    max: isServerless ? 1 : 8,
+    idle_timeout: 20,
+    connect_timeout: 10,
     prepare: false,
   });
 }
