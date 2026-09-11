@@ -182,18 +182,16 @@ export default function DishBoard({ dishes, catalogs }) {
       <Popup
         isOpen={Boolean(editingDish) || isCreating}
         onClose={closeEditor}
+        title={isCreating ? "Nuevo plato" : editingDish?.name || ""}
         showClose
         closePosition="bar"
-        maxWidthClass="max-w-3xl"
-        panelClassName="px-5 pb-6 pt-4 sm:px-7 sm:pb-7"
+        headerTone="brand"
+        maxWidthClass="max-w-[min(72rem,96vw)]"
+        panelBgClass="bg-cream"
+        overflowMode="none"
+        panelClassName="px-4 pb-5 pt-4 sm:px-6 sm:pb-6 sm:pt-4 lg:px-8"
         listenEscape={!dishToDelete}
       >
-        <div className="mb-4">
-          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-red-700">Carta</p>
-          <h2 className="text-[clamp(1.2rem,3vw,1.6rem)] font-semibold text-stone-900">
-            {isCreating ? "Nuevo plato" : editingDish?.name}
-          </h2>
-        </div>
         <DishForm
           key={editingDish?.id || "new"}
           action={isCreating ? createDishAction : updateDishAction}

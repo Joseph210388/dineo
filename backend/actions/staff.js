@@ -4,6 +4,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { sql } from "../db";
 import { requireAdmin, requireStaff } from "../auth";
+import { getCachedDashboardStats } from "../staff-dashboard";
 import { DEFAULT_PAYMENT_METHOD, isPaymentMethod } from "../../lib/payment-methods";
 import { STAFF_RESERVATIONS_FETCH_LIMIT } from "../../lib/search-text";
 import {
@@ -41,7 +42,6 @@ function mapStaffDish(row, extras = {}) {
     category: row.category,
     stock: row.stock,
     isAvailable: row.is_available,
-    recommendation: row.recommendation || "",
     ingredients: extras.ingredients || [],
     allergens: extras.allergens || [],
     ingredientIds: extras.ingredientIds || [],
@@ -56,101 +56,16 @@ function refreshStaff() {
   revalidatePath("/staff/users");
   revalidatePath("/staff/ingredients");
   revalidatePath("/staff/allergens");
+  revalidatePath("/staff/categories");
   revalidatePath("/food");
   revalidatePath("/favorites");
   revalidateTag("dishes");
+  revalidateTag("staff-dashboard");
 }
 
 export async function getDashboardStats() {
   await requireStaff();
-
-  // Una sola ida a Postgres: en Vercel el pooler solo deja 1 conexion por instancia
-  const [row] = await sql`
-    select
-      coalesce((
-        select sum(total_price)
-        from reservations
-        where status in ('confirmed', 'completed')
-          and reservation_date = current_date
-      ), 0) as today_sales,
-      coalesce((
-        select sum(total_price)
-        from reservations
-        where status in ('confirmed', 'completed')
-          and reservation_date >= date_trunc('month', current_date)::date
-      ), 0) as month_sales,
-      coalesce((
-        select sum(total_price)
-        from reservations
-        where status in ('confirmed', 'completed')
-      ), 0) as all_sales,
-      (
-        select count(*)::int
-        from reservations
-        where status = 'pending'
-      ) as pending_count,
-      (
-        select count(*)::int
-        from reservations
-        where reservation_date = current_date
-      ) as today_reservations,
-      (select count(*)::int from dishes) as dish_count,
-      (
-        select count(*)::int
-        from dishes
-        where is_available = true
-      ) as available_dishes,
-      (
-        select count(*)::int
-        from users
-        where is_active = true and role = 'customer'
-      ) as customer_count,
-      (
-        select count(*)::int
-        from users
-        where is_active = true and role in ('employee', 'admin')
-      ) as staff_count,
-      (
-        select coalesce(json_agg(recent order by recent.created_at desc), '[]'::json)
-        from (
-          select
-            reservations.id,
-            reservations.reservation_date,
-            reservations.reservation_time,
-            reservations.total_price,
-            reservations.status,
-            reservations.created_at,
-            users.first_name,
-            users.last_name
-          from reservations
-          inner join users on users.id = reservations.user_id
-          order by reservations.created_at desc
-          limit 6
-        ) as recent
-      ) as recent_reservations
-  `;
-
-  const recentReservations = Array.isArray(row.recent_reservations) ? row.recent_reservations : [];
-
-  return {
-    todaySales: Number(row.today_sales),
-    monthSales: Number(row.month_sales),
-    allSales: Number(row.all_sales),
-    pendingCount: Number(row.pending_count),
-    todayReservations: Number(row.today_reservations),
-    dishCount: Number(row.dish_count),
-    availableDishes: Number(row.available_dishes),
-    customerCount: Number(row.customer_count),
-    staffCount: Number(row.staff_count),
-    recentReservations: recentReservations.map((reservation) => ({
-      id: String(reservation.id),
-      date: toDateText(reservation.reservation_date),
-      time: String(reservation.reservation_time).slice(0, 5),
-      total: Number(reservation.total_price),
-      status: reservation.status,
-      guestName: `${reservation.first_name} ${reservation.last_name}`,
-    })),
-  };
+  return getCachedDashboardStats();
 }
 
 export async function listStaffDishes() {
@@ -158,7 +73,7 @@ export async function listStaffDishes() {
 
   // La lista solo pinta foto, nombre y precio; ingredientes/alérgenos se piden al abrir el plato
   const dishes = await sql`
-    select id, name, description, price, image_url, category, stock, is_available, recommendation
+    select id, name, description, price, image_url, category, stock, is_available
     from dishes
     order by name
   `;
@@ -170,7 +85,7 @@ export async function getStaffDish(id) {
   await requireStaff();
 
   const [dish] = await sql`
-    select id, name, description, price, image_url, category, stock, is_available, recommendation
+    select id, name, description, price, image_url, category, stock, is_available
     from dishes
     where id = ${id}
     limit 1
@@ -194,7 +109,6 @@ export async function createDishAction(formData) {
   const price = Number(formData.get("price"));
   const stock = Number(formData.get("stock"));
   const isAvailable = formData.get("isAvailable") === "on";
-  const recommendation = String(formData.get("recommendation") || "").trim();
   const ingredientIds = parseIdList(formData, "ingredientIds");
   const allergenIds = parseIdList(formData, "allergenIds");
   const extraImages = parseTextList(formData.get("extraImages"));
@@ -204,8 +118,8 @@ export async function createDishAction(formData) {
   }
 
   const [dish] = await sql`
-    insert into dishes (name, description, price, image_url, category, stock, is_available, recommendation)
-    values (${name}, ${description}, ${price}, ${imageUrl}, ${category}, ${Number.isNaN(stock) ? 0 : stock}, ${isAvailable}, ${recommendation || null})
+    insert into dishes (name, description, price, image_url, category, stock, is_available)
+    values (${name}, ${description}, ${price}, ${imageUrl}, ${category}, ${Number.isNaN(stock) ? 0 : stock}, ${isAvailable})
     returning id
   `;
 
@@ -225,7 +139,6 @@ export async function updateDishAction(formData) {
   const price = Number(formData.get("price"));
   const stock = Number(formData.get("stock"));
   const isAvailable = formData.get("isAvailable") === "on";
-  const recommendation = String(formData.get("recommendation") || "").trim();
   const ingredientIds = parseIdList(formData, "ingredientIds");
   const allergenIds = parseIdList(formData, "allergenIds");
   const extraImages = parseTextList(formData.get("extraImages"));
@@ -243,8 +156,7 @@ export async function updateDishAction(formData) {
       image_url = ${imageUrl},
       category = ${category},
       stock = ${Number.isNaN(stock) ? 0 : stock},
-      is_available = ${isAvailable},
-      recommendation = ${recommendation || null}
+      is_available = ${isAvailable}
     where id = ${id}
   `;
 
@@ -623,9 +535,11 @@ export async function listStaffCatalogs() {
   await requireStaff();
   const ingredients = await listCatalogIngredients();
   const allergens = await listCatalogAllergens();
+  const categories = await sql`select id, name from categories order by name`;
   return {
     ingredients: ingredients.map(mapCatalogItem),
     allergens: allergens.map(mapCatalogItem),
+    categories: categories.map(mapCatalogItem),
   };
 }
 
@@ -641,20 +555,28 @@ export async function listStaffAllergens() {
   return allergens.map(mapCatalogItem);
 }
 
+export async function listStaffCategories() {
+  await requireStaff();
+  const categories = await sql`select id, name from categories order by name`;
+  return categories.map(mapCatalogItem);
+}
+
 export async function createCatalogItemAction(formData) {
   await requireStaff();
   const kind = String(formData.get("kind") || "");
   const name = String(formData.get("name") || "").trim();
 
-  if (!name || (kind !== "ingredient" && kind !== "allergen")) {
+  if (!name || !["ingredient", "allergen", "category"].includes(kind)) {
     return { ok: false, message: "Escribe un nombre" };
   }
 
   try {
     if (kind === "ingredient") {
       await sql`insert into ingredients (name) values (${name})`;
-    } else {
+    } else if (kind === "allergen") {
       await sql`insert into allergens (name) values (${name})`;
+    } else {
+      await sql`insert into categories (name) values (${name})`;
     }
   } catch {
     return { ok: false, message: "Ese nombre ya existe" };
@@ -670,15 +592,23 @@ export async function updateCatalogItemAction(formData) {
   const id = String(formData.get("id") || "");
   const name = String(formData.get("name") || "").trim();
 
-  if (!id || !name || (kind !== "ingredient" && kind !== "allergen")) {
+  if (!id || !name || !["ingredient", "allergen", "category"].includes(kind)) {
     return { ok: false, message: "Revisa el nombre" };
   }
 
   try {
     if (kind === "ingredient") {
       await sql`update ingredients set name = ${name} where id = ${id}`;
-    } else {
+    } else if (kind === "allergen") {
       await sql`update allergens set name = ${name} where id = ${id}`;
+    } else {
+      const [previous] = await sql`select name from categories where id = ${id} limit 1`;
+      if (!previous) {
+        return { ok: false, message: "Categoría no encontrada" };
+      }
+      await sql`update categories set name = ${name} where id = ${id}`;
+      // Los platos guardan el nombre de categoría en texto
+      await sql`update dishes set category = ${name} where category = ${previous.name}`;
     }
   } catch {
     return { ok: false, message: "Ese nombre ya existe" };
@@ -693,14 +623,28 @@ export async function deleteCatalogItemAction(formData) {
   const kind = String(formData.get("kind") || "");
   const id = String(formData.get("id") || "");
 
-  if (!id || (kind !== "ingredient" && kind !== "allergen")) {
+  if (!id || !["ingredient", "allergen", "category"].includes(kind)) {
     return { ok: false, message: "Falta el elemento" };
   }
 
   if (kind === "ingredient") {
     await sql`delete from ingredients where id = ${id}`;
-  } else {
+  } else if (kind === "allergen") {
     await sql`delete from allergens where id = ${id}`;
+  } else {
+    const [row] = await sql`select name from categories where id = ${id} limit 1`;
+    if (row) {
+      const [{ count }] = await sql`
+        select count(*)::int as count from dishes where category = ${row.name}
+      `;
+      if (count > 0) {
+        return {
+          ok: false,
+          message: `Hay ${count} plato(s) con esta categoría. Cámbialos antes de borrarla.`,
+        };
+      }
+    }
+    await sql`delete from categories where id = ${id}`;
   }
 
   refreshStaff();

@@ -58,13 +58,22 @@ export default function CatalogManager({ kind, title, description, items }) {
   }
 
   async function handleDelete(id) {
-    if (!window.confirm("¿Eliminarlo del catálogo? Se quitará de los platos que lo usen.")) {
+    const confirmMessage =
+      kind === "category"
+        ? "¿Eliminar esta categoría? Solo se puede si ningún plato la usa."
+        : "¿Eliminarlo del catálogo? Se quitará de los platos que lo usen.";
+    if (!window.confirm(confirmMessage)) {
       return;
     }
+    setError("");
     const data = new FormData();
     data.set("kind", kind);
     data.set("id", id);
-    await deleteCatalogItemAction(data);
+    const result = await deleteCatalogItemAction(data);
+    if (result && result.ok === false) {
+      setError(result.message);
+      return;
+    }
     router.refresh();
   }
 

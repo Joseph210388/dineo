@@ -1,22 +1,38 @@
 "use client";
 
 import { useState } from "react";
-import RelatedCatalogField from "./related-catalog-field";
+import MultiSelectField from "./multi-select-field";
+import DishImageEditor from "./dish-image-editor";
 
 const inputClass =
-  "mt-1 w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 outline-none ring-red-700/20 focus:border-red-700 focus:ring-4";
+  "mt-1.5 w-full rounded-xl border border-stone-300/80 bg-cream px-3.5 py-2.5 text-sm text-stone-800 outline-none ring-red-700/15 transition placeholder:text-stone-400 focus:border-red-700 focus:bg-white focus:ring-4";
+
+function Field({ label, className = "", children }) {
+  return (
+    <label className={`block text-sm font-medium text-stone-700 ${className}`.trim()}>
+      {label}
+      {children}
+    </label>
+  );
+}
 
 export default function DishForm({ action, dish, catalogs, submitLabel, onSaved, onDelete }) {
-  const extraImagesValue = dish?.extraImages?.join("\n") || "";
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event) {
     event.preventDefault();
     setError("");
-    setIsSubmitting(true);
 
-    const result = await action(new FormData(event.currentTarget));
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    if (!String(data.get("imageUrl") || "").trim()) {
+      setError("Añade al menos una foto (subir o URL)");
+      return;
+    }
+
+    setIsSubmitting(true);
+    const result = await action(data);
     setIsSubmitting(false);
 
     if (!result?.ok) {
@@ -28,126 +44,133 @@ export default function DishForm({ action, dish, catalogs, submitLabel, onSaved,
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
+    <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
       {dish ? <input type="hidden" name="id" value={dish.id} /> : null}
 
-      <label className="block text-sm font-medium text-stone-700">
-        Nombre
-        <input className={inputClass} name="name" defaultValue={dish?.name || ""} required />
-      </label>
+      <div className="thin-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto px-1 pb-2">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(15rem,0.9fr)] lg:items-start">
+          <div className="grid gap-3 rounded-2xl border border-stone-200/90 bg-stone-50/90 p-3 sm:grid-cols-2 sm:p-4">
+            <Field label="Nombre" className="sm:col-span-2">
+              <input className={inputClass} name="name" defaultValue={dish?.name || ""} required />
+            </Field>
 
-      <label className="block text-sm font-medium text-stone-700">
-        Categoría
-        <input
-          className={inputClass}
-          name="category"
-          defaultValue={dish?.category || ""}
-          placeholder="Entrante, principal, postre..."
-          required
-        />
-      </label>
+            <Field label="Categoría">
+              {(catalogs?.categories || []).length ? (
+                <select
+                  className={inputClass}
+                  name="category"
+                  defaultValue={dish?.category || ""}
+                  required
+                >
+                  <option value="" disabled>
+                    Elige una categoría
+                  </option>
+                  {(catalogs?.categories || []).map((item) => (
+                    <option key={item.id} value={item.name}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <p className="mt-1.5 rounded-xl border border-dashed border-stone-300 bg-cream px-3 py-3 text-sm text-stone-500">
+                  Primero crea categorías en{" "}
+                  <a href="/staff/categories" className="font-medium text-red-800 underline-offset-2 hover:underline">
+                    su tabla
+                  </a>
+                  .
+                </p>
+              )}
+            </Field>
 
-      <label className="block text-sm font-medium text-stone-700">
-        Precio (€)
-        <input
-          className={inputClass}
-          name="price"
-          type="number"
-          min="0"
-          step="0.01"
-          defaultValue={dish?.price ?? ""}
-          required
-        />
-      </label>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Precio (€)">
+                <input
+                  className={inputClass}
+                  name="price"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  defaultValue={dish?.price ?? ""}
+                  required
+                />
+              </Field>
+              <Field label="Stock">
+                <input
+                  className={inputClass}
+                  name="stock"
+                  type="number"
+                  min="0"
+                  step="1"
+                  defaultValue={dish?.stock ?? 0}
+                />
+              </Field>
+            </div>
 
-      <label className="block text-sm font-medium text-stone-700">
-        Stock
-        <input
-          className={inputClass}
-          name="stock"
-          type="number"
-          min="0"
-          step="1"
-          defaultValue={dish?.stock ?? 0}
-        />
-      </label>
+            <Field label="Descripción" className="sm:col-span-2">
+              <textarea
+                className={`${inputClass} h-48 max-h-48 resize-none overflow-y-auto`}
+                name="description"
+                defaultValue={dish?.description || ""}
+                maxLength={280}
+                required
+              />
+            </Field>
 
-      <label className="block text-sm font-medium text-stone-700 md:col-span-2">
-        Imagen principal (URL)
-        <input
-          className={inputClass}
-          name="imageUrl"
-          type="url"
-          defaultValue={dish?.image || ""}
-          required
-        />
-      </label>
+            <div className="grid gap-3 sm:col-span-2 sm:grid-cols-2">
+              <MultiSelectField
+                name="ingredientIds"
+                label="Ingredientes"
+                options={catalogs?.ingredients || []}
+                selectedIds={dish?.ingredientIds || []}
+                catalogHref="/staff/ingredients"
+                emptyText="Aún no hay ingredientes. Créalos en la tabla de ingredientes."
+                placeholder="Seleccionar ingredientes…"
+              />
+              <MultiSelectField
+                name="allergenIds"
+                label="Alérgenos"
+                options={catalogs?.allergens || []}
+                selectedIds={dish?.allergenIds || []}
+                catalogHref="/staff/allergens"
+                emptyText="Aún no hay alérgenos. Créalos en la tabla de alérgenos."
+                placeholder="Seleccionar alérgenos…"
+              />
+            </div>
+          </div>
 
-      <label className="block text-sm font-medium text-stone-700 md:col-span-2">
-        Descripción
-        <textarea
-          className={`${inputClass} min-h-24`}
-          name="description"
-          defaultValue={dish?.description || ""}
-          required
-        />
-      </label>
+          <aside className="flex flex-col gap-3 rounded-2xl border border-stone-300/70 bg-stone-200/40 p-3 sm:p-4">
+            <p className="text-sm font-medium text-stone-700">Fotos</p>
+            <DishImageEditor
+              key={dish?.id || "new"}
+              mainImage={dish?.image || ""}
+              extraImages={dish?.extraImages || []}
+            />
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-stone-300/80 bg-cream px-3 py-3 text-sm text-stone-700">
+              <input
+                type="checkbox"
+                name="isAvailable"
+                defaultChecked={dish ? dish.isAvailable : true}
+                className="checkbox-red mt-0.5"
+              />
+              <span>
+                <span className="block font-medium text-stone-800">Visible en la carta</span>
+                <span className="mt-0.5 block text-xs text-stone-500">
+                  Si lo quitas, el comensal no lo verá en Comida.
+                </span>
+              </span>
+            </label>
+          </aside>
+        </div>
 
-      <RelatedCatalogField
-        name="ingredientIds"
-        label="Ingredientes"
-        options={catalogs?.ingredients || []}
-        selectedIds={dish?.ingredientIds || []}
-        catalogHref="/staff/ingredients"
-        emptyText="Aún no hay ingredientes. Créalos en la tabla de ingredientes."
-      />
+        {error ? <p className="text-sm text-red-700">{error}</p> : null}
+      </div>
 
-      <RelatedCatalogField
-        name="allergenIds"
-        label="Alérgenos"
-        options={catalogs?.allergens || []}
-        selectedIds={dish?.allergenIds || []}
-        catalogHref="/staff/allergens"
-        emptyText="Aún no hay alérgenos. Créalos en la tabla de alérgenos."
-      />
-
-      <label className="block text-sm font-medium text-stone-700 md:col-span-2">
-        Fotos extra (una URL por línea)
-        <textarea
-          className={`${inputClass} min-h-20`}
-          name="extraImages"
-          defaultValue={extraImagesValue}
-        />
-      </label>
-
-      <label className="block text-sm font-medium text-stone-700 md:col-span-2">
-        Recomendación
-        <textarea
-          className={`${inputClass} min-h-20`}
-          name="recommendation"
-          defaultValue={dish?.recommendation || ""}
-          placeholder="Con qué marida o qué pedir después"
-        />
-      </label>
-
-      <label className="flex items-center gap-2 text-sm font-medium text-stone-700 md:col-span-2">
-        <input
-          type="checkbox"
-          name="isAvailable"
-          defaultChecked={dish ? dish.isAvailable : true}
-          className="h-4 w-4 rounded border-stone-300 text-red-700 focus:ring-red-700"
-        />
-        Visible en la carta pública
-      </label>
-
-      {error ? <p className="text-sm text-red-700 md:col-span-2">{error}</p> : null}
-
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-stone-100 pt-4 md:col-span-2">
+      <div className="mt-1 flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-stone-300/70 px-0 pt-4">
         {onDelete ? (
           <button
             type="button"
             onClick={onDelete}
-            className="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
+            className="rounded-xl border border-red-300/80 bg-cream px-4 py-2.5 text-sm font-medium text-red-800 hover:bg-red-50"
           >
             Eliminar platillo
           </button>
@@ -158,7 +181,7 @@ export default function DishForm({ action, dish, catalogs, submitLabel, onSaved,
         <button
           type="submit"
           disabled={isSubmitting}
-          className="rounded-lg bg-red-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-800 disabled:opacity-60"
+          className="rounded-xl bg-red-800 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-red-900 disabled:opacity-60"
         >
           {isSubmitting ? "Guardando..." : submitLabel}
         </button>

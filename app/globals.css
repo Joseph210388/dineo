@@ -22,6 +22,45 @@
   .text-balance {
     text-wrap: balance;
   }
+
+  /* Checkbox Taipei: fondo blanco, marca en rojo */
+  .checkbox-red {
+    @apply h-4 w-4 shrink-0 appearance-none rounded border-2 border-stone-300 bg-white;
+  }
+
+  .checkbox-red:checked {
+    @apply border-red-800 bg-red-800;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M3.5 8.5L6.5 11.5L12.5 4.5' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-size: 0.75rem;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
+  /* Scroll fino dentro de popups: la barra nativa del panel se veía pegada al borde redondo */
+  .thin-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(168 162 158 / 0.7) transparent;
+  }
+
+  .thin-scrollbar::-webkit-scrollbar {
+    width: 0.5rem;
+  }
+
+  .thin-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+    margin-block: 0.5rem;
+  }
+
+  .thin-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgb(168 162 158 / 0.55);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
+  .thin-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(120 113 108 / 0.8);
+  }
 }
 
 .background-image{

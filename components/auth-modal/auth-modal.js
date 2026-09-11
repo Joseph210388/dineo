@@ -28,8 +28,10 @@ export default function AuthModal({
     <Popup
       isOpen={isOpen}
       onClose={onClose}
+      title=""
       showClose={showClose}
       closePosition="bar"
+      headerTone="transparent"
       maxWidthClass="max-w-md"
       panelClassName="px-5 pb-6 pt-4 sm:px-7 sm:pb-7"
     >

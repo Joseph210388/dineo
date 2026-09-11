@@ -17,15 +17,15 @@ export default function ConfirmPopup({
     <Popup
       isOpen={isOpen}
       onClose={onCancel}
+      title={title}
       showClose={false}
       closePosition="bar"
+      headerTone="transparent"
       maxWidthClass="max-w-md"
       zClass="z-[80]"
-      panelClassName="px-5 py-6 sm:px-7 sm:py-7"
+      panelClassName="px-5 pb-6 pt-4 sm:px-7 sm:pb-7"
     >
-      <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-red-700">Confirmar</p>
-      <h2 className="mt-2 text-[clamp(1.2rem,3vw,1.5rem)] font-semibold text-stone-900">{title}</h2>
-      {description ? <p className="mt-2 text-sm text-stone-500">{description}</p> : null}
+      {description ? <p className="text-sm text-stone-500">{description}</p> : null}
 
       {itemName ? (
         <div className="mt-4 flex items-center gap-3 rounded-2xl bg-stone-50 p-3">

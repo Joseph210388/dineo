@@ -58,6 +58,18 @@ create index if not exists sessions_user_id_idx on sessions (user_id);
 create index if not exists sessions_expires_at_idx on sessions (expires_at);
 
 -- ---------------------------------------------------------------------------
+-- Categorías de carta (catálogo). dishes.category guarda el nombre en texto.
+-- ---------------------------------------------------------------------------
+create table if not exists categories (
+  id bigint generated always as identity primary key,
+  name text not null,
+  created_at timestamptz not null default now(),
+  constraint categories_name_unique unique (name)
+);
+
+create index if not exists categories_name_idx on categories (name);
+
+-- ---------------------------------------------------------------------------
 -- Platillos
 -- ---------------------------------------------------------------------------
 create table if not exists dishes (
@@ -232,6 +244,7 @@ end $$;
 alter table users enable row level security;
 alter table sessions enable row level security;
 alter table dishes enable row level security;
+alter table categories enable row level security;
 alter table ingredients enable row level security;
 alter table allergens enable row level security;
 alter table dish_ingredient_links enable row level security;

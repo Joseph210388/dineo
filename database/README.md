@@ -28,7 +28,8 @@ Una base que ya existe = el siguiente `.sql` de `migrations/`, y luego actualiza
 - Migraciones ya aplicadas en ese proyecto:
   1. `20260904231251_dish_popup_details`
   2. `20260905001016_add_ingredient_allergen_catalogs`
-  3. `20260905180000_reservation_payment_method`
+  3. `20260905155919_reservation_payment_method`
+  4. `20260911224738_dish_categories_catalog` (tabla `categories`)
 
 La primera instalación (usuarios, platos, carrito, reservas) se hizo a mano el 2026-09-03/04. Quedó reconstruida en `migrations/20260903_initial_public_schema.sql`.
 
@@ -36,6 +37,7 @@ La primera instalación (usuarios, platos, carrito, reservas) se hizo a mano el 
 
 - `users`, `sessions` — cuentas propias (bcrypt + cookie)
 - `dishes`, `dish_images` — carta
+- `categories` — catálogo de categorías (Entradas, Principales…)
 - `ingredients`, `allergens` — catálogos
 - `dish_ingredient_links`, `dish_allergen_links` — plato ↔ catálogo
 - `carts`, `cart_items`

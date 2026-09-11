@@ -2,6 +2,7 @@
 
 import { sql } from "../db";
 import { loadDishRelations, relationsForDish } from "../dish-relations";
+import { suggestDishesFor } from "../../lib/suggest-dishes";
 
 function mapDish(row, extras = {}) {
   const photos = [row.image_url, ...(extras.images || [])].filter(Boolean);
@@ -17,7 +18,6 @@ function mapDish(row, extras = {}) {
     images: uniquePhotos,
     category: row.category,
     stock: row.stock,
-    recommendation: row.recommendation || "",
     ingredients: extras.ingredients || [],
     allergens: extras.allergens || [],
   };
@@ -25,7 +25,7 @@ function mapDish(row, extras = {}) {
 
 async function loadAllDishes() {
   const dishes = await sql`
-    select id, name, description, price, image_url, category, stock, recommendation
+    select id, name, description, price, image_url, category, stock
     from dishes
     where is_available = true
     order by name
@@ -33,20 +33,12 @@ async function loadAllDishes() {
 
   const extras = await loadDishRelations(dishes.map((dish) => dish.id));
 
-  return dishes.map((dish) => {
-    const mapped = mapDish(dish, relationsForDish(dish.id, extras));
-    mapped.suggestions = dishes
-      .filter((other) => other.id !== dish.id && other.category === dish.category)
-      .slice(0, 3)
-      .map((other) => ({
-        id: String(other.id),
-        name: other.name,
-        image: other.image_url,
-        price: Number(other.price),
-        category: other.category,
-      }));
-    return mapped;
-  });
+  const mapped = dishes.map((dish) => mapDish(dish, relationsForDish(dish.id, extras)));
+
+  return mapped.map((dish) => ({
+    ...dish,
+    suggestions: suggestDishesFor(dish, mapped, 3),
+  }));
 }
 
 function isProductionBuild() {
@@ -67,7 +59,7 @@ export async function getDishById(id) {
     return null;
   }
   const [dish] = await sql`
-    select id, name, description, price, image_url, category, stock, recommendation
+    select id, name, description, price, image_url, category, stock
     from dishes
     where id = ${id}
     limit 1
@@ -80,21 +72,24 @@ export async function getDishById(id) {
   const extras = await loadDishRelations([dish.id]);
   const mapped = mapDish(dish, relationsForDish(dish.id, extras));
 
-  const similar = await sql`
+  const others = await sql`
     select id, name, image_url, price, category
     from dishes
-    where is_available = true and id <> ${dish.id} and category = ${dish.category}
+    where is_available = true and id <> ${dish.id}
     order by name
-    limit 3
   `;
 
-  mapped.suggestions = similar.map((other) => ({
-    id: String(other.id),
-    name: other.name,
-    image: other.image_url,
-    price: Number(other.price),
-    category: other.category,
-  }));
+  mapped.suggestions = suggestDishesFor(
+    mapped,
+    others.map((row) => ({
+      id: row.id,
+      name: row.name,
+      image: row.image_url,
+      price: row.price,
+      category: row.category,
+    })),
+    3
+  );
 
   return mapped;
 }

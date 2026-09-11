@@ -18,9 +18,10 @@ export default function DishPopup({ dish, onClose, onOpenDish, showClose = true 
   return (
     <Popup
       onClose={onClose}
+      title=""
       showClose={showClose}
       closePosition="overlay"
-      closeTone="light"
+      headerTone="light"
       maxWidthClass="max-w-xl sm:max-w-2xl"
       zClass="z-50"
     >
@@ -80,13 +81,6 @@ export default function DishPopup({ dish, onClose, onOpenDish, showClose = true 
             </p>
           ) : null}
 
-          {dish.recommendation ? (
-            <p className="text-sm text-stone-600">
-              <span className="font-semibold text-stone-800">Recomendación: </span>
-              {dish.recommendation}
-            </p>
-          ) : null}
-
           <div className="flex flex-col gap-3 border-t border-stone-100 pt-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-sm text-stone-500">Total del plato:</p>
@@ -98,6 +92,9 @@ export default function DishPopup({ dish, onClose, onOpenDish, showClose = true 
           {dish.suggestions?.length ? (
             <div>
               <h3 className="text-sm font-semibold text-stone-900">También te puede gustar</h3>
+              <p className="mt-1 text-xs text-stone-500">
+                Sugerencias según la categoría del plato.
+              </p>
               <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
                 {dish.suggestions.map((suggestion) => (
                   <button

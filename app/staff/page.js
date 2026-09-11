@@ -1,9 +1,28 @@
+import { Suspense } from "react";
 import StaffLink from "../../components/staff/staff-link";
 import { getDashboardStats } from "../../backend/actions/staff";
 import { formatMoney, formatDate } from "../../backend/staff-format";
 import { ReservationBadge } from "../../components/staff/status-badge";
 
-export default async function StaffHomePage() {
+function DashboardSkeleton() {
+  return (
+    <div className="mt-6 space-y-6" aria-busy="true" aria-label="Cargando resumen">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="h-28 animate-pulse rounded-2xl border border-stone-200 bg-white" />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div key={index} className="h-24 animate-pulse rounded-2xl border border-stone-200 bg-white" />
+        ))}
+      </div>
+      <div className="h-40 animate-pulse rounded-2xl border border-stone-200 bg-white" />
+    </div>
+  );
+}
+
+async function DashboardBody() {
   const stats = await getDashboardStats();
 
   const cards = [
@@ -14,22 +33,7 @@ export default async function StaffHomePage() {
   ];
 
   return (
-    <main className="mx-auto w-full max-w-6xl">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-[clamp(1.4rem,3vw,2rem)] text-stone-900">Resumen</h1>
-          <p className="mt-1 max-w-xl text-sm text-stone-500">
-            Dinero de reservas confirmadas o completadas. Las pendientes no entran en la caja.
-          </p>
-        </div>
-        <StaffLink
-          href="/staff/dishes/new"
-          className="inline-flex w-fit rounded-lg bg-red-700 px-4 py-2 text-sm font-medium text-white hover:bg-red-800"
-        >
-          Nuevo plato
-        </StaffLink>
-      </div>
-
+    <div>
       <section className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {cards.map((card) => (
           <article key={card.label} className="rounded-2xl border border-stone-200 bg-white p-4 sm:p-5">
@@ -92,6 +96,31 @@ export default async function StaffHomePage() {
           </ul>
         )}
       </section>
+    </div>
+  );
+}
+
+export default function StaffHomePage() {
+  return (
+    <main className="mx-auto w-full max-w-6xl">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-[clamp(1.4rem,3vw,2rem)] text-stone-900">Resumen</h1>
+          <p className="mt-1 max-w-xl text-sm text-stone-500">
+            Dinero de reservas confirmadas o completadas. Las pendientes no entran en la caja.
+          </p>
+        </div>
+        <StaffLink
+          href="/staff/dishes/new"
+          className="inline-flex w-fit rounded-lg bg-red-700 px-4 py-2 text-sm font-medium text-white hover:bg-red-800"
+        >
+          Nuevo plato
+        </StaffLink>
+      </div>
+
+      <Suspense fallback={<DashboardSkeleton />}>
+        <DashboardBody />
+      </Suspense>
     </main>
   );
 }
