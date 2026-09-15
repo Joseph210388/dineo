@@ -54,6 +54,7 @@ function refreshStaff() {
   revalidatePath("/staff/dishes");
   revalidatePath("/staff/reservations");
   revalidatePath("/staff/users");
+  revalidatePath("/staff/settings");
   revalidatePath("/staff/ingredients");
   revalidatePath("/staff/allergens");
   revalidatePath("/staff/categories");
@@ -108,7 +109,8 @@ export async function createDishAction(formData) {
   const category = String(formData.get("category") || "").trim();
   const price = Number(formData.get("price"));
   const stock = Number(formData.get("stock"));
-  const isAvailable = formData.get("isAvailable") === "on";
+  // Sin checkbox en el formulario: los platos nuevos quedan visibles en carta
+  const isAvailable = true;
   const ingredientIds = parseIdList(formData, "ingredientIds");
   const allergenIds = parseIdList(formData, "allergenIds");
   const extraImages = parseTextList(formData.get("extraImages"));
@@ -138,7 +140,6 @@ export async function updateDishAction(formData) {
   const category = String(formData.get("category") || "").trim();
   const price = Number(formData.get("price"));
   const stock = Number(formData.get("stock"));
-  const isAvailable = formData.get("isAvailable") === "on";
   const ingredientIds = parseIdList(formData, "ingredientIds");
   const allergenIds = parseIdList(formData, "allergenIds");
   const extraImages = parseTextList(formData.get("extraImages"));
@@ -147,6 +148,7 @@ export async function updateDishAction(formData) {
     return { ok: false, message: "Revisa los datos del platillo" };
   }
 
+  // No tocamos is_available: ya no se edita desde el formulario
   await sql`
     update dishes
     set
@@ -155,8 +157,7 @@ export async function updateDishAction(formData) {
       price = ${price},
       image_url = ${imageUrl},
       category = ${category},
-      stock = ${Number.isNaN(stock) ? 0 : stock},
-      is_available = ${isAvailable}
+      stock = ${Number.isNaN(stock) ? 0 : stock}
     where id = ${id}
   `;
 

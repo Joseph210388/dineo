@@ -16,8 +16,10 @@ const STAFF_PATHS = [
   "/staff",
   "/staff/dishes",
   "/staff/dishes/new",
+  "/staff/settings",
   "/staff/ingredients",
   "/staff/allergens",
+  "/staff/categories",
   "/staff/reservations",
   "/staff/users",
 ];

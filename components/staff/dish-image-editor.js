@@ -17,7 +17,7 @@ function buildInitialImages(mainImage, extraImages) {
   return list.length ? list : [];
 }
 
-export default function DishImageEditor({ mainImage = "", extraImages = [] }) {
+export default function DishImageEditor({ mainImage = "", extraImages = [], compact = false }) {
   const fileRef = useRef(null);
   const [images, setImages] = useState(() => buildInitialImages(mainImage, extraImages));
   const [thumbIndex, setThumbIndex] = useState(0);
@@ -107,8 +107,15 @@ export default function DishImageEditor({ mainImage = "", extraImages = [] }) {
     setActiveIndex((currentActive) => (currentActive + delta + images.length) % images.length);
   }
 
+  const previewClass = compact
+    ? "h-32 w-full max-w-full object-cover"
+    : "aspect-[4/3] w-full max-w-full object-cover";
+  const emptyClass = compact
+    ? "flex h-32 flex-col items-center justify-center gap-1.5 px-3 text-center text-xs text-stone-600"
+    : "flex aspect-[4/3] flex-col items-center justify-center gap-2 px-4 text-center text-sm text-stone-600";
+
   return (
-    <div className="flex flex-col gap-3">
+    <div className={`flex flex-col ${compact ? "gap-2" : "gap-3"}`}>
       <input type="hidden" name="imageUrl" value={images[thumbIndex] || ""} />
       <input type="hidden" name="extraImages" value={extrasForSubmit.join("\n")} />
       <input
@@ -119,13 +126,13 @@ export default function DishImageEditor({ mainImage = "", extraImages = [] }) {
         onChange={onFileChange}
       />
 
-      <div className="group relative overflow-hidden rounded-xl border border-stone-300/70 bg-stone-300/40 shadow-inner">
+      <div className="group relative mx-auto w-full max-w-[14rem] overflow-hidden rounded-xl border border-stone-300/70 bg-stone-300/40 shadow-inner sm:max-w-[16rem] lg:max-w-none">
         {current ? (
-          <img src={current} alt="" className="aspect-[4/3] w-full max-w-full object-cover" />
+          <img src={current} alt="" className={previewClass} />
         ) : (
-          <div className="flex aspect-[4/3] flex-col items-center justify-center gap-2 px-4 text-center text-sm text-stone-600">
-            <HiOutlinePhotograph className="h-8 w-8 text-stone-400" />
-            Pasa el ratón para añadir la primera foto
+          <div className={emptyClass}>
+            <HiOutlinePhotograph className={compact ? "h-6 w-6 text-stone-400" : "h-8 w-8 text-stone-400"} />
+            {compact ? "Sube o pega una URL" : "Pasa el ratón para añadir la primera foto"}
           </div>
         )}
 
@@ -262,9 +269,9 @@ export default function DishImageEditor({ mainImage = "", extraImages = [] }) {
               key={`${src.slice(0, 48)}-${index}`}
               type="button"
               onClick={() => setActiveIndex(index)}
-              className={`relative h-12 w-12 shrink-0 overflow-hidden rounded-lg border-2 ${
-                index === activeIndex ? "border-red-800" : "border-transparent"
-              }`}
+              className={`relative shrink-0 overflow-hidden rounded-lg border-2 ${
+                compact ? "h-9 w-9" : "h-12 w-12"
+              } ${index === activeIndex ? "border-red-800" : "border-transparent"}`}
             >
               <img src={src} alt="" className="h-full w-full object-cover" />
               {index === thumbIndex ? (

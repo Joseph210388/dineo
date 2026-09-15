@@ -12,13 +12,20 @@ import ShowMoreButton from "../show-more-button/show-more-button";
 import { matchesSearch, TABLE_PAGE_SIZE } from "../../lib/search-text";
 import { usePagedList } from "../../lib/use-paged-list";
 
-export default function CatalogManager({ kind, title, description, items }) {
+export default function CatalogManager({
+  kind,
+  title,
+  description,
+  items,
+  variant = "page",
+}) {
   const router = useRouter();
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [editingId, setEditingId] = useState("");
   const [editingName, setEditingName] = useState("");
   const [query, setQuery] = useState("");
+  const isPanel = variant === "panel";
 
   const filtered = useMemo(() => {
     return items.filter((item) => matchesSearch(item.name, query));
@@ -77,12 +84,32 @@ export default function CatalogManager({ kind, title, description, items }) {
     router.refresh();
   }
 
-  return (
-    <main className="mx-auto w-full max-w-3xl">
-      <h1 className="text-[clamp(1.4rem,3vw,2rem)] text-stone-900">{title}</h1>
-      <p className="mt-1 text-sm text-stone-500">{description}</p>
+  const shellClass = isPanel
+    ? "flex min-h-0 flex-1 flex-col gap-3 px-4 pb-4 sm:px-5"
+    : "mx-auto w-full max-w-3xl";
 
-      <form onSubmit={handleCreate} className="mt-6 flex flex-col gap-2 rounded-2xl border border-stone-200 bg-white p-4 sm:flex-row">
+  const formClass = isPanel
+    ? "flex flex-col gap-2 rounded-xl border border-stone-200 bg-cream p-3 sm:flex-row"
+    : "mt-6 flex flex-col gap-2 rounded-2xl border border-stone-200 bg-white p-4 sm:flex-row";
+
+  const listClass = isPanel
+    ? "thin-scrollbar min-h-0 flex-1 divide-y divide-stone-100 overflow-y-auto rounded-xl border border-stone-200 bg-cream"
+    : "mt-6 divide-y divide-stone-100 overflow-hidden rounded-2xl border border-stone-200 bg-white";
+
+  const itemPad = isPanel ? "px-3 py-2.5" : "px-4 py-3";
+
+  return (
+    <div className={shellClass}>
+      {!isPanel ? (
+        <>
+          <h1 className="text-[clamp(1.4rem,3vw,2rem)] text-stone-900">{title}</h1>
+          <p className="mt-1 text-sm text-stone-500">{description}</p>
+        </>
+      ) : description ? (
+        <p className="text-sm text-stone-500">{description}</p>
+      ) : null}
+
+      <form onSubmit={handleCreate} className={formClass}>
         <input
           value={name}
           onChange={(event) => setName(event.target.value)}
@@ -94,10 +121,10 @@ export default function CatalogManager({ kind, title, description, items }) {
           Crear
         </button>
       </form>
-      {error ? <p className="mt-2 text-sm text-red-700">{error}</p> : null}
+      {error ? <p className="text-sm text-red-700">{error}</p> : null}
 
       {items.length > 0 ? (
-        <div className="mt-6 max-w-xl">
+        <div className={isPanel ? "max-w-full" : "mt-6 max-w-xl"}>
           <SearchInput
             value={query}
             onChange={setQuery}
@@ -110,10 +137,13 @@ export default function CatalogManager({ kind, title, description, items }) {
         </div>
       ) : null}
 
-      <ul className="mt-6 divide-y divide-stone-100 overflow-hidden rounded-2xl border border-stone-200 bg-white">
+      <ul className={listClass}>
         {page.total ? (
           page.visible.map((item) => (
-            <li key={item.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <li
+              key={item.id}
+              className={`flex flex-col gap-2 ${itemPad} sm:flex-row sm:items-center sm:justify-between`}
+            >
               {editingId === item.id ? (
                 <form onSubmit={handleUpdate} className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row">
                   <input
@@ -154,12 +184,12 @@ export default function CatalogManager({ kind, title, description, items }) {
             </li>
           ))
         ) : (
-          <li className="px-4 py-8 text-center text-sm text-stone-500">
+          <li className={`${itemPad} py-8 text-center text-sm text-stone-500`}>
             {items.length ? "Nada coincide con esa búsqueda." : "Todavía no hay ninguno."}
           </li>
         )}
       </ul>
       <ShowMoreButton remaining={page.remaining} onClick={page.showMore} />
-    </main>
+    </div>
   );
 }

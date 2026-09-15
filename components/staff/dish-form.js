@@ -48,7 +48,18 @@ export default function DishForm({ action, dish, catalogs, submitLabel, onSaved,
       {dish ? <input type="hidden" name="id" value={dish.id} /> : null}
 
       <div className="thin-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto px-1 pb-2">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_minmax(15rem,0.9fr)] lg:items-start">
+        {/* Fotos arriba / a la izquierda y más compactas */}
+        <div className="grid gap-4 lg:grid-cols-[minmax(11rem,16rem)_minmax(0,1fr)] lg:items-start">
+          <aside className="flex flex-col gap-2.5 rounded-2xl border border-stone-300/70 bg-stone-200/40 p-2.5 sm:p-3">
+            <p className="text-sm font-medium text-stone-700">Fotos</p>
+            <DishImageEditor
+              key={dish?.id || "new"}
+              mainImage={dish?.image || ""}
+              extraImages={dish?.extraImages || []}
+              compact
+            />
+          </aside>
+
           <div className="grid gap-3 rounded-2xl border border-stone-200/90 bg-stone-50/90 p-3 sm:grid-cols-2 sm:p-4">
             <Field label="Nombre" className="sm:col-span-2">
               <input className={inputClass} name="name" defaultValue={dish?.name || ""} required />
@@ -74,7 +85,10 @@ export default function DishForm({ action, dish, catalogs, submitLabel, onSaved,
               ) : (
                 <p className="mt-1.5 rounded-xl border border-dashed border-stone-300 bg-cream px-3 py-3 text-sm text-stone-500">
                   Primero crea categorías en{" "}
-                  <a href="/staff/categories" className="font-medium text-red-800 underline-offset-2 hover:underline">
+                  <a
+                    href="/staff/settings?catalog=categories"
+                    className="font-medium text-red-800 underline-offset-2 hover:underline"
+                  >
                     su tabla
                   </a>
                   .
@@ -122,7 +136,7 @@ export default function DishForm({ action, dish, catalogs, submitLabel, onSaved,
                 label="Ingredientes"
                 options={catalogs?.ingredients || []}
                 selectedIds={dish?.ingredientIds || []}
-                catalogHref="/staff/ingredients"
+                catalogHref="/staff/settings?catalog=ingredients"
                 emptyText="Aún no hay ingredientes. Créalos en la tabla de ingredientes."
                 placeholder="Seleccionar ingredientes…"
               />
@@ -131,35 +145,12 @@ export default function DishForm({ action, dish, catalogs, submitLabel, onSaved,
                 label="Alérgenos"
                 options={catalogs?.allergens || []}
                 selectedIds={dish?.allergenIds || []}
-                catalogHref="/staff/allergens"
+                catalogHref="/staff/settings?catalog=allergens"
                 emptyText="Aún no hay alérgenos. Créalos en la tabla de alérgenos."
                 placeholder="Seleccionar alérgenos…"
               />
             </div>
           </div>
-
-          <aside className="flex flex-col gap-3 rounded-2xl border border-stone-300/70 bg-stone-200/40 p-3 sm:p-4">
-            <p className="text-sm font-medium text-stone-700">Fotos</p>
-            <DishImageEditor
-              key={dish?.id || "new"}
-              mainImage={dish?.image || ""}
-              extraImages={dish?.extraImages || []}
-            />
-            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-stone-300/80 bg-cream px-3 py-3 text-sm text-stone-700">
-              <input
-                type="checkbox"
-                name="isAvailable"
-                defaultChecked={dish ? dish.isAvailable : true}
-                className="checkbox-red mt-0.5"
-              />
-              <span>
-                <span className="block font-medium text-stone-800">Visible en la carta</span>
-                <span className="mt-0.5 block text-xs text-stone-500">
-                  Si lo quitas, el comensal no lo verá en Comida.
-                </span>
-              </span>
-            </label>
-          </aside>
         </div>
 
         {error ? <p className="text-sm text-red-700">{error}</p> : null}
