@@ -3,11 +3,11 @@
 import { useMemo, useState } from "react";
 import StaffLink from "./staff-link";
 import SearchInput from "../search-input/search-input";
-import ShowMoreButton from "../show-more-button/show-more-button";
+import Pagination from "../pagination/pagination";
 import { RoleBadge } from "./status-badge";
 import { formatDate } from "../../backend/staff-format";
 import { matchesSearch, TABLE_PAGE_SIZE } from "../../lib/search-text";
-import { usePagedList } from "../../lib/use-paged-list";
+import { usePaginator } from "../../lib/use-paginator";
 
 export default function StaffUsersBoard({ users }) {
   const [query, setQuery] = useState("");
@@ -18,11 +18,11 @@ export default function StaffUsersBoard({ users }) {
     );
   }, [query, users]);
 
-  const page = usePagedList(filtered, TABLE_PAGE_SIZE);
+  const page = usePaginator(filtered, TABLE_PAGE_SIZE);
 
   return (
     <div>
-      <div className="mt-6 max-w-xl">
+      <div className="max-w-xl">
         <SearchInput
           value={query}
           onChange={setQuery}
@@ -31,7 +31,7 @@ export default function StaffUsersBoard({ users }) {
         />
       </div>
       <p className="mt-3 text-sm text-stone-500">
-        {page.total} coinciden · se ven {page.visible.length}
+        {page.total} coinciden · página {page.page} de {page.totalPages}
       </p>
 
       {page.total === 0 ? (
@@ -71,7 +71,13 @@ export default function StaffUsersBoard({ users }) {
               ))}
             </ul>
           </div>
-          <ShowMoreButton remaining={page.remaining} onClick={page.showMore} />
+          <Pagination
+            page={page.page}
+            totalPages={page.totalPages}
+            total={page.total}
+            pageSize={page.pageSize}
+            onPageChange={page.setPage}
+          />
         </div>
       )}
     </div>

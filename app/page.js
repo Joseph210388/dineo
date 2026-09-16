@@ -61,14 +61,14 @@ export default function Home() {
             className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/45 to-black/35"
             aria-hidden="true"
           ></div>
-          {/* Puente al crema: el vídeo se desvanece en vez de cortar en seco */}
+          {/* Puente al crema: franja corta para no tapar tanto el vídeo */}
           <div
-            className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[clamp(7rem,22vh,14rem)] bg-gradient-to-b from-transparent via-cream/70 to-cream"
+            className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[clamp(2.75rem,8vh,4.5rem)] bg-gradient-to-b from-transparent via-cream/55 to-cream"
             aria-hidden="true"
           ></div>
         </div>
 
-        <div className="relative z-10 mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-5xl flex-col items-center justify-center px-4 pb-[clamp(5rem,14vh,9rem)] pt-16 text-center sm:px-6 lg:px-8">
+        <div className="relative z-10 mx-auto flex min-h-[calc(100svh-4rem)] w-full max-w-5xl flex-col items-center justify-center px-4 pb-[clamp(3.5rem,9vh,5.5rem)] pt-16 text-center sm:px-6 lg:px-8">
           <Image
             src={Logo}
             width={56}

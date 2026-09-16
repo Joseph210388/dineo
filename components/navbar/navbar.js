@@ -6,13 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import CartButton from "../cart-button/cart-button";
 import UserMenu from "../user-menu/user-menu";
-
-const NAV_LINKS = [
-  { href: "/", label: "Inicio" },
-  { href: "/food", label: "Comida" },
-  { href: "/about", label: "Nosotros" },
-  { href: "/contact", label: "Contactanos" },
-];
+import { MAIN_NAV_LINKS } from "../../lib/site-nav";
 
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -59,7 +53,7 @@ export default function Navbar() {
             </Link>
             <div className="hidden sm:ml-6 sm:block">
               <div className="flex space-x-4">
-                {NAV_LINKS.map((link) => (
+                {MAIN_NAV_LINKS.map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}
@@ -81,7 +75,7 @@ export default function Navbar() {
 
       <div className={`${isMobileMenuOpen ? "block" : "hidden"} sm:hidden`} id="mobile-menu">
         <div className="space-y-1 px-2 pb-3 pt-2">
-          {NAV_LINKS.map((link) => (
+          {MAIN_NAV_LINKS.map((link) => (
             <Link
               key={link.href}
               href={link.href}

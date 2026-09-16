@@ -7,12 +7,7 @@ import {
   isStaffRole,
   readSessionFromToken,
 } from "./backend/session-token";
-
-const publicRoutes = ["/", "/about", "/contact", "/food", "/dish", "/sign-in", "/sign-up", STAFF_LOGIN_PATH];
-
-function isPublicPath(pathname: string) {
-  return publicRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`));
-}
+import { isPublicPath } from "./lib/public-paths";
 
 function isStaffPath(pathname: string) {
   return pathname === STAFF_HOME_PATH || pathname.startsWith(`${STAFF_HOME_PATH}/`);

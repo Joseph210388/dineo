@@ -8,9 +8,9 @@ import {
   updateCatalogItemAction,
 } from "../../backend/actions/staff";
 import SearchInput from "../search-input/search-input";
-import ShowMoreButton from "../show-more-button/show-more-button";
+import Pagination from "../pagination/pagination";
 import { matchesSearch, TABLE_PAGE_SIZE } from "../../lib/search-text";
-import { usePagedList } from "../../lib/use-paged-list";
+import { usePaginator } from "../../lib/use-paginator";
 
 export default function CatalogManager({
   kind,
@@ -31,7 +31,7 @@ export default function CatalogManager({
     return items.filter((item) => matchesSearch(item.name, query));
   }, [items, query]);
 
-  const page = usePagedList(filtered, TABLE_PAGE_SIZE);
+  const page = usePaginator(filtered, TABLE_PAGE_SIZE);
 
   async function handleCreate(event) {
     event.preventDefault();
@@ -132,7 +132,7 @@ export default function CatalogManager({
             placeholder="Nombre"
           />
           <p className="mt-2 text-sm text-stone-500">
-            {page.total} coinciden · se ven {page.visible.length}
+            {page.total} coinciden · página {page.page} de {page.totalPages}
           </p>
         </div>
       ) : null}
@@ -189,7 +189,13 @@ export default function CatalogManager({
           </li>
         )}
       </ul>
-      <ShowMoreButton remaining={page.remaining} onClick={page.showMore} />
+      <Pagination
+        page={page.page}
+        totalPages={page.totalPages}
+        total={page.total}
+        pageSize={page.pageSize}
+        onPageChange={page.setPage}
+      />
     </div>
   );
 }

@@ -95,13 +95,7 @@ export default function CatalogSettingsBoard({ categories, ingredients, allergen
 
   return (
     <div className="mx-auto w-full max-w-5xl">
-      <h1 className="text-[clamp(1.4rem,3vw,2rem)] text-stone-900">Configuración</h1>
-      <p className="mt-1 max-w-2xl text-sm text-stone-500">
-        Categorías, ingredientes y alérgenos en un solo sitio. Ábrelos en un popup para
-        gestionarlos sin una página entera cada uno.
-      </p>
-
-      <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {CATALOGS.map((catalog) => {
           const Icon = catalog.icon;
           const count = itemsByKind[catalog.kind]?.length || 0;

@@ -7,11 +7,11 @@ import { formatMoney } from "../../backend/staff-format";
 import Popup from "../popup/popup";
 import ConfirmPopup from "../popup/confirm-popup";
 import SearchInput from "../search-input/search-input";
-import ShowMoreButton from "../show-more-button/show-more-button";
+import Pagination from "../pagination/pagination";
 import ViewToggle from "../view-toggle/view-toggle";
 import DishForm from "./dish-form";
 import { matchesSearch, MENU_PAGE_SIZE, TABLE_PAGE_SIZE } from "../../lib/search-text";
-import { usePagedList } from "../../lib/use-paged-list";
+import { usePaginator } from "../../lib/use-paginator";
 
 const VIEW_KEY = "taipei_staff_dishes_view";
 
@@ -30,7 +30,7 @@ export default function DishBoard({ dishes, catalogs }) {
   }, [dishes, query]);
 
   const pageSize = viewMode === "grid" ? MENU_PAGE_SIZE : TABLE_PAGE_SIZE;
-  const page = usePagedList(filtered, pageSize);
+  const page = usePaginator(filtered, pageSize);
 
   useEffect(() => {
     const saved = window.localStorage.getItem(VIEW_KEY);
@@ -73,24 +73,18 @@ export default function DishBoard({ dishes, catalogs }) {
 
   return (
     <div className="mx-auto w-full max-w-6xl">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-[clamp(1.4rem,3vw,2rem)] text-stone-900">Carta</h1>
-          <p className="mt-1 text-sm text-stone-500">Edita en un popup. Relaciona ingredientes y alérgenos del catálogo.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <ViewToggle value={viewMode} onChange={changeView} />
-          <button
-            type="button"
-            onClick={() => {
-              setEditingDish(null);
-              setIsCreating(true);
-            }}
-            className="inline-flex w-fit rounded-lg bg-red-700 px-4 py-2 text-sm font-medium text-white hover:bg-red-800"
-          >
-            Nuevo plato
-          </button>
-        </div>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <ViewToggle value={viewMode} onChange={changeView} />
+        <button
+          type="button"
+          onClick={() => {
+            setEditingDish(null);
+            setIsCreating(true);
+          }}
+          className="inline-flex w-fit rounded-lg bg-red-700 px-4 py-2 text-sm font-medium text-white hover:bg-red-800"
+        >
+          Nuevo plato
+        </button>
       </div>
 
       {dishes.length > 0 ? (
@@ -102,7 +96,7 @@ export default function DishBoard({ dishes, catalogs }) {
             placeholder="Nombre o categoría"
           />
           <p className="mt-2 text-sm text-stone-500">
-            {page.total} coinciden · se ven {page.visible.length}
+            {page.total} coinciden · página {page.page} de {page.totalPages}
           </p>
         </div>
       ) : null}
@@ -139,7 +133,13 @@ export default function DishBoard({ dishes, catalogs }) {
             </button>
           ))}
         </div>
-        <ShowMoreButton remaining={page.remaining} onClick={page.showMore} />
+        <Pagination
+          page={page.page}
+          totalPages={page.totalPages}
+          total={page.total}
+          pageSize={page.pageSize}
+          onPageChange={page.setPage}
+        />
         </div>
       ) : (
         <div>
@@ -175,7 +175,13 @@ export default function DishBoard({ dishes, catalogs }) {
             ))}
           </ul>
         </div>
-        <ShowMoreButton remaining={page.remaining} onClick={page.showMore} />
+        <Pagination
+          page={page.page}
+          totalPages={page.totalPages}
+          total={page.total}
+          pageSize={page.pageSize}
+          onPageChange={page.setPage}
+        />
         </div>
       )}
 

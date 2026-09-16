@@ -1,10 +1,13 @@
 const BASE = process.env.SMOKE_URL || "http://localhost:3000";
 
+// Mantener alineado con PUBLIC_SMOKE_PATHS en lib/public-paths.js
 const PUBLIC_PATHS = [
   "/",
   "/food",
   "/about",
   "/contact",
+  "/privacy",
+  "/terms",
   "/sign-in",
   "/sign-up",
   "/acceso-personal",

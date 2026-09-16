@@ -3,11 +3,11 @@
 import { useMemo, useState } from "react";
 import StaffLink from "./staff-link";
 import SearchInput from "../search-input/search-input";
-import ShowMoreButton from "../show-more-button/show-more-button";
+import Pagination from "../pagination/pagination";
 import { ReservationBadge } from "./status-badge";
 import { formatDate, formatMoney, paymentMethodLabel } from "../../backend/staff-format";
 import { matchesSearch, STAFF_RESERVATIONS_FETCH_LIMIT, TABLE_PAGE_SIZE } from "../../lib/search-text";
-import { usePagedList } from "../../lib/use-paged-list";
+import { usePaginator } from "../../lib/use-paginator";
 
 const STATUSES = [
   { id: "", label: "Todas" },
@@ -33,7 +33,7 @@ export default function StaffReservationsBoard({ reservations }) {
     });
   }, [query, reservations, status]);
 
-  const page = usePagedList(filtered, TABLE_PAGE_SIZE);
+  const page = usePaginator(filtered, TABLE_PAGE_SIZE);
 
   return (
     <section className="mt-8">
@@ -41,7 +41,7 @@ export default function StaffReservationsBoard({ reservations }) {
         <div>
           <h2 className="text-base font-semibold text-stone-900">Listado</h2>
           <p className="mt-1 text-sm text-stone-500">
-            {page.total} coinciden · se ven {page.visible.length}
+            {page.total} coinciden · página {page.page} de {page.totalPages}
             {reservations.length >= STAFF_RESERVATIONS_FETCH_LIMIT
               ? ` · últimas ${STAFF_RESERVATIONS_FETCH_LIMIT}`
               : ""}
@@ -111,7 +111,13 @@ export default function StaffReservationsBoard({ reservations }) {
               ))}
             </ul>
           </div>
-          <ShowMoreButton remaining={page.remaining} onClick={page.showMore} />
+          <Pagination
+            page={page.page}
+            totalPages={page.totalPages}
+            total={page.total}
+            pageSize={page.pageSize}
+            onPageChange={page.setPage}
+          />
         </div>
       )}
     </section>

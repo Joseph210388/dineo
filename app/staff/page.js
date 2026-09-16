@@ -103,13 +103,7 @@ async function DashboardBody() {
 export default function StaffHomePage() {
   return (
     <main className="mx-auto w-full max-w-6xl">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-[clamp(1.4rem,3vw,2rem)] text-stone-900">Resumen</h1>
-          <p className="mt-1 max-w-xl text-sm text-stone-500">
-            Dinero de reservas confirmadas o completadas. Las pendientes no entran en la caja.
-          </p>
-        </div>
+      <div className="flex justify-end">
         <StaffLink
           href="/staff/dishes/new"
           className="inline-flex w-fit rounded-lg bg-red-700 px-4 py-2 text-sm font-medium text-white hover:bg-red-800"
