@@ -93,3 +93,40 @@ export async function getDishById(id) {
 
   return mapped;
 }
+
+/** Platos sugeridos para el mini-carrito (sin relaciones, excluye lo que ya lleva). */
+export async function listCartSuggestDishes(excludeIds = [], limit = 10) {
+  if (isProductionBuild()) {
+    return [];
+  }
+
+  const capped = Math.min(Math.max(Number(limit) || 10, 1), 20);
+  const excluded = (Array.isArray(excludeIds) ? excludeIds : [])
+    .map((id) => Number(id))
+    .filter((id) => Number.isFinite(id));
+
+  const rows =
+    excluded.length > 0
+      ? await sql`
+          select id, name, price, image_url
+          from dishes
+          where is_available = true
+            and id not in ${sql(excluded)}
+          order by name
+          limit ${capped}
+        `
+      : await sql`
+          select id, name, price, image_url
+          from dishes
+          where is_available = true
+          order by name
+          limit ${capped}
+        `;
+
+  return rows.map((row) => ({
+    id: String(row.id),
+    name: row.name,
+    price: Number(row.price),
+    image: row.image_url,
+  }));
+}

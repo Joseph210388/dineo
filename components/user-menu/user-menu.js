@@ -105,6 +105,7 @@ export default function UserMenu() {
                 </div>
               </div>
               {isStaffRole(user.role) ? (
+                // Defensa: el middleware ya manda al panel; esto no debería verse en la web pública
                 <MenuLink href="/staff" onClick={() => setIsOpen(false)}>
                   <HiOutlineHome className="h-4 w-4 text-red-800" />
                   Ir al panel

@@ -86,7 +86,7 @@ export default function DishPopup({ dish, onClose, onOpenDish, showClose = true 
               <p className="text-sm text-stone-500">Total del plato:</p>
               <p className="text-[clamp(1.5rem,4vw,2rem)] text-stone-900">{dish.price}€</p>
             </div>
-            <AddToCartButton dishId={dish._id} variant="popup" />
+            <AddToCartButton dishId={dish._id} imageUrl={dish.image} variant="popup" />
           </div>
 
           {dish.suggestions?.length ? (

@@ -41,10 +41,10 @@ export default function FoodPage({ dishes }) {
 
   return (
     <section className="flex-1 bg-cream">
-      <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-5 md:px-6 md:py-8 lg:px-8">
-        <Slider />
+      <Slider />
 
-        <header className="mt-5 text-center md:mt-6">
+      <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-5 md:px-6 md:py-8 lg:px-8">
+        <header className="text-center">
           <p className="text-[0.7rem] font-semibold uppercase tracking-[0.28em] text-red-800">
             Cocina peruana
           </p>

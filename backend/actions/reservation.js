@@ -12,11 +12,23 @@ export async function createReservation(
   reservationDate,
   reservationTime,
   numberOfPeople,
-  paymentMethod = DEFAULT_PAYMENT_METHOD
+  paymentMethod = DEFAULT_PAYMENT_METHOD,
+  guestName = "",
+  contactPhone = "",
+  contactEmail = ""
 ) {
   const user = await requireCustomer();
   const items = await getCartItems();
   const method = isPaymentMethod(paymentMethod) ? paymentMethod : DEFAULT_PAYMENT_METHOD;
+  const accountName = [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
+  const reservedFor = String(guestName || "").trim() || accountName;
+  const phone = String(contactPhone || "").trim();
+  const email = String(contactEmail || "").trim() || user.email || "";
+  const noteParts = [];
+  if (reservedFor) noteParts.push(`A nombre de: ${reservedFor}`);
+  if (phone) noteParts.push(`Tel: ${phone}`);
+  if (email) noteParts.push(`Email: ${email}`);
+  const notes = noteParts.length ? noteParts.join(" · ") : null;
 
   if (!items.length) {
     throw new Error("El carrito esta vacio");
@@ -30,7 +42,8 @@ export async function createReservation(
       number_of_people,
       total_price,
       status,
-      payment_method
+      payment_method,
+      notes
     )
     values (
       ${user.id},
@@ -39,9 +52,10 @@ export async function createReservation(
       ${numberOfPeople},
       ${totalPrice},
       'confirmed',
-      ${method}
+      ${method},
+      ${notes}
     )
-    returning id, reservation_date, reservation_time, number_of_people, total_price, status, payment_method
+    returning id, reservation_date, reservation_time, number_of_people, total_price, status, payment_method, notes
   `;
 
   for (const item of items) {

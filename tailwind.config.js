@@ -31,6 +31,32 @@ module.exports = {
           from: { transform: "translate3d(0, 0.75rem, 0)", opacity: "0" },
           to: { transform: "translate3d(0, 0, 0)", opacity: "1" },
         },
+        cartFly: {
+          "0%": {
+            transform: "translate3d(0, 0, 0) scale(1)",
+            opacity: "1",
+          },
+          "70%": {
+            opacity: "1",
+          },
+          "100%": {
+            transform: "translate3d(var(--fly-x), var(--fly-y), 0) scale(0.28)",
+            opacity: "0.35",
+          },
+        },
+        cartPop: {
+          "0%": { transform: "scale(1)" },
+          "40%": { transform: "scale(1.22)" },
+          "100%": { transform: "scale(1)" },
+        },
+        cartRowOut: {
+          "0%": { opacity: "1", transform: "translate3d(0, 0, 0)", maxHeight: "8rem" },
+          "100%": { opacity: "0", transform: "translate3d(0, -0.5rem, 0)", maxHeight: "0", paddingTop: "0", paddingBottom: "0", marginTop: "0", marginBottom: "0" },
+        },
+        cartNoticeIn: {
+          from: { opacity: "0", transform: "translate3d(0, -0.35rem, 0)" },
+          to: { opacity: "1", transform: "translate3d(0, 0, 0)" },
+        },
       },
       animation: {
         "sheet-in": "sheetIn 0.32s cubic-bezier(0.22, 1, 0.36, 1) both",
@@ -38,6 +64,10 @@ module.exports = {
         "backdrop-in": "backdropIn 0.2s ease-out both",
         "toast-in": "toastIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both",
         "toast-up": "toastUp 0.28s cubic-bezier(0.22, 1, 0.36, 1) both",
+        "cart-fly": "cartFly 0.65s cubic-bezier(0.22, 1, 0.36, 1) forwards",
+        "cart-pop": "cartPop 0.4s ease-out",
+        "cart-row-out": "cartRowOut 0.45s ease forwards",
+        "cart-notice-in": "cartNoticeIn 0.3s ease-out both",
       },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",

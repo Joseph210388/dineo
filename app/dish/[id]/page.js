@@ -39,7 +39,7 @@ const DishDetailPage = async ({ params }) => {
                             <hr></hr>
                             <div className=" m-2 flex items-center justify-between">
                                 <p className="title-font font-medium text-3xl text-gray-900">{dish.price}€</p>
-                                <AddToCartButton dishId={dish._id}/>
+                                <AddToCartButton dishId={dish._id} imageUrl={dish.image} />
                             </div>
                         </div>
                         

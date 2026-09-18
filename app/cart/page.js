@@ -1,235 +1,634 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from "react";
-import { getCartItems, deleteCartItem, deleteAllCartItems} from "../../backend/actions/cart";
-import { useAuth } from "../../components/auth-provider";
-import {createReservation} from "../../backend/actions/reservation";
-import PaymentMethodPicker from "../../components/payment-method-picker/payment-method-picker";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { HiOutlineTrash } from "react-icons/hi";
+import { getCartItems, deleteCartItem, updateCartItemQuantity } from "../../backend/actions/cart";
+import { listCartSuggestDishes, getDishById } from "../../backend/actions/dish";
+import { createReservation } from "../../backend/actions/reservation";
+import { formatMoney } from "../../backend/staff-format";
+import { CART_CHANGED_EVENT, notifyCartChanged } from "../../lib/cart-events";
 import { DEFAULT_PAYMENT_METHOD } from "../../lib/payment-methods";
+import { useAuth } from "../../components/auth-provider";
+import PaymentMethodPicker from "../../components/payment-method-picker/payment-method-picker";
+import CartSuggestCarousel from "../../components/cart-button/cart-suggest-carousel";
+import DishPopup from "../../components/dish-popup/dish-popup";
+import useDishPopup from "../../components/dish-popup/use-dish-popup";
+
+const fieldClass =
+  "mt-1.5 w-full rounded-xl border border-stone-300/80 bg-white px-3 py-2 text-sm text-stone-800 outline-none transition placeholder:text-stone-400 focus:border-red-700 focus:ring-4 focus:ring-red-700/15";
+
+const compactFieldClass =
+  "mt-1 w-full min-w-0 rounded-lg border border-stone-300/80 bg-white px-2 py-1.5 text-xs text-stone-800 outline-none transition focus:border-red-700 focus:ring-2 focus:ring-red-700/15 sm:text-sm";
+
+function minReservationDate() {
+  const date = new Date();
+  date.setDate(date.getDate() + 2);
+  return date.toISOString().split("T")[0];
+}
+
+function looksLikeEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
+}
+
+function looksLikePhone(value) {
+  const digits = String(value || "").replace(/\D/g, "");
+  return digits.length >= 9;
+}
 
 export default function Cart() {
-    const [cartItems, setCartItems] = useState([]);
-    const { user } = useAuth();
-    const userId = user?.id;
-    const [totalPrice, setTotalPrice] = useState(0);
-    const [reservationDate, setReservationDate] = useState('');
-    const [reservationTime, setReservationTime] = useState('');
-    const [numberOfPeople, setNumberOfPeople] = useState(1);
-    const [paymentMethod, setPaymentMethod] = useState(DEFAULT_PAYMENT_METHOD);
-    const [isSubmitting, setIsSubmitting] = useState(false);
-    const [isFormValid, setIsFormValid] = useState(false);
-    
-    useEffect(() => {
-        async function fetchCartItems() {
-            try {
-                if (cartItems.length === 0 && userId) {
-                    const items = await getCartItems();
-                    setCartItems(items);
-                }
-            } catch (error) {
-                console.error("Error al obtener los platillos del carrito:", error);
-            }
-        }
-        fetchCartItems();
-    }, [userId]); 
-    
-    // Ahora el useEffect se ejecuta cuando cambia cartItems, pero no en el montaje inicial
-    const calculateTotalPriceDish = (dishPrice, quantity) => {
-        return (dishPrice * quantity).toFixed(2);
+  const { user } = useAuth();
+  const userId = user?.id;
+  const clientName = useMemo(
+    () => [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim() || "Cliente",
+    [user?.firstName, user?.lastName]
+  );
+  const clientEmail = user?.email || "";
+
+  const [cartItems, setCartItems] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
+  const [totalPrice, setTotalPrice] = useState(0);
+  const [reservationDate, setReservationDate] = useState("");
+  const [reservationTime, setReservationTime] = useState("");
+  const [numberOfPeople, setNumberOfPeople] = useState(2);
+  const [paymentMethod, setPaymentMethod] = useState(DEFAULT_PAYMENT_METHOD);
+  const [nameMode, setNameMode] = useState("self");
+  const [guestName, setGuestName] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isFormValid, setIsFormValid] = useState(false);
+  const [removingIds, setRemovingIds] = useState(() => new Set());
+  const [removedNotice, setRemovedNotice] = useState("");
+  const noticeTimer = useRef(null);
+  const skipRefresh = useRef(false);
+  const { selectedDish, openDish, closeDish } = useDishPopup();
+
+  async function loadSuggestions(items) {
+    try {
+      const excludeIds = (items || []).map((item) => item.dishId);
+      const next = await listCartSuggestDishes(excludeIds, 12);
+      setSuggestions(Array.isArray(next) ? next : []);
+    } catch {
+      setSuggestions([]);
+    }
+  }
+
+  async function refreshCartItems() {
+    if (!userId) {
+      setCartItems([]);
+      setSuggestions([]);
+      return;
+    }
+    try {
+      const items = await getCartItems();
+      const list = Array.isArray(items) ? items : [];
+      setCartItems(list);
+      await loadSuggestions(list);
+    } catch (error) {
+      console.error("Error al obtener los platillos del carrito:", error);
+    }
+  }
+
+  useEffect(() => {
+    refreshCartItems();
+
+    function onCartChanged() {
+      if (skipRefresh.current) {
+        return;
+      }
+      refreshCartItems();
+    }
+
+    window.addEventListener(CART_CHANGED_EVENT, onCartChanged);
+    return () => {
+      window.removeEventListener(CART_CHANGED_EVENT, onCartChanged);
+      clearTimeout(noticeTimer.current);
     };
+  }, [userId]);
 
-    // Función para aumentar la cantidad de un platillo
-    const increaseQuantity = (index) => {
-        const updatedCartItems = [...cartItems];
-        if (updatedCartItems[index].quantity < 10) { 
-            updatedCartItems[index].quantity++;
-            setCartItems(updatedCartItems);
-        }
-    };
+  useEffect(() => {
+    let total = 0;
+    cartItems.forEach((item) => {
+      total += item.dishPrice * item.quantity;
+    });
+    setTotalPrice(total);
+  }, [cartItems]);
 
-    // Función para disminuir la cantidad de un platillo
-    const decreaseQuantity = (index) => {
-        const updatedCartItems = [...cartItems];
-        if (updatedCartItems[index].quantity > 1) { 
-            updatedCartItems[index].quantity--;
-            setCartItems(updatedCartItems);
-        }
-    };
-
-    // Obtener la fecha de mañana en el formato YYYY-MM-DD
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 2);
-    const tomorrowFormatted = tomorrow.toISOString().split('T')[0];
-
-    // Calcular el precio total del carrito
-    useEffect(() => {
-        let total = 0;
-        cartItems.forEach((item) => {
-            total += item.dishPrice * item.quantity;
-        });
-        setTotalPrice(total.toFixed(2));
-    }, [cartItems]);
-
-    // Verificar si todos los campos del formulario están completos
-    useEffect(() => {
-        const isFormComplete = reservationDate && reservationTime && numberOfPeople;
-        setIsFormValid(isFormComplete);
-    }, [reservationDate, reservationTime, numberOfPeople]);
-
-    const handleDeleteItem = (itemId) => {
-        try {
-            deleteCartItem(null, itemId);
-            window.location.reload();
-        } catch (error) {
-            console.error("Error al eliminar el platillo del carrito:", error);
-        }
-    };
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        try {
-            setIsSubmitting(true);
-            const formattedDishDetail = cartItems.map(item => ({
-                dishName: item.dishName,
-                quantity: item.quantity
-            }));
-            const reservation = await createReservation(
-                userId,
-                formattedDishDetail,
-                totalPrice,
-                reservationDate,
-                reservationTime,
-                numberOfPeople,
-                paymentMethod
-            );
-            console.log('Reserva creada:', reservation);
-        } catch (error) {
-            console.log('Reserva creada');
-            const confirmation = window.confirm('¡Reserva realizada con éxito! ¿Quieres ir a ver tus reservas?');
-            if (confirmation) {
-                await deleteAllCartItems();
-                window.location.href = '/reservation';
-            }
-        }
-    };
-
-    const handlePaymentClick = (e) => {
-        e.preventDefault();
-        const isConfirmed = window.confirm('¿Estás seguro de que deseas realizar el pago?');
-        if (isConfirmed) {
-            handleSubmit(e); // Llama a handleSubmit y pasa el evento correctamente
-        }
-    };
-
-    return(
-        <div className="bg-cream p-3 md:p-10">
-            <span className="flex items-center">
-                <span className="h-px flex-1 bg-red-700"></span>
-                    <h1 className="text-3xl mb-2 font-semibold px-6">
-                        Carrito de {user?.firstName} {user?.lastName}
-                    </h1>
-                <span className="h-px flex-1 bg-red-700"></span>
-            </span>
-            <div className="flex flex-col pt-6 lg:flex-row ">
-                <div className="lg:w-3/5 lg:px-12 py-8 lg:py-3">
-                    {cartItems.length === 0 ? (
-                        <p className="text-gray-600 text-center">No hay platillos en el carrito</p>
-                    ) : (
-                        <ul>
-                            {cartItems.map((items, index) => (
-                                <li key={index}>
-                                    <div className="flex items-center justify-between border-b border-gray-300 py-2">
-                                        <div className="flex gap-4">
-                                            <div className="flex gap-3 items-center">
-                                                <button className="bg-red-700 text-white p-2 text-lg rounded-l-lg" onClick={() => decreaseQuantity(index)}>-</button>
-                                                <span>{items.quantity}</span>
-                                                <button className="bg-red-700 text-white p-2 text-lg rounded-r-lg" onClick={() => increaseQuantity(index)}>+</button>
-                                            </div>
-                                            <img
-                                                src={items.dishImage}
-                                                alt="item Image"
-                                                className="w-16 h-16 "
-                                            />
-                                            <div>
-                                                <p className="text-gray-900">{items.dishName}</p>
-                                                <p className="text-gray-500">{items.dishCategory}</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-4">
-                                            <p className="text-gray-900">
-                                                {calculateTotalPriceDish(items.dishPrice, items.quantity)}€</p>
-                                            <button className="bg-red-700 p-2 rounded-lg" onClick={() => handleDeleteItem(items.dishId)}><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" className="text-white bi bi-trash3-fill" viewBox="0 0 16 16">
-                                            <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06m6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528M8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5"/>
-                                            </svg></button>
-                                        </div>
-                                    </div>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                </div>
-                <div className="border-t lg:border-l lg:border-t-0 border-red-700 lg:w-2/5 lg:px-12 py-8 lg:py-3">
-                    <h3 className="text-2xl font-bold">Resumen de la Reserva</h3>
-                    <hr className="w-full h-0.5 bg-gray-300 my-2" />
-                    <form onSubmit={handleSubmit} className="flex flex-col gap-3 m-2">
-                        <p className="font-bold">Id: <span className="text-gray-500">{user?.id}</span></p>
-                        <p className="font-bold">Cliente: <span className="text-gray-500">{user?.firstName} {user?.lastName}</span></p>
-                        <p className="font-bold">Complete los datos:</p>
-                        <div className="flex gap-2 items-center">
-                            <div className="flex flex-col">
-                                <label htmlFor="reservationTime" className="font-bold">Hora:</label>
-                                <input
-                                    className="w-fit h-6 rounded"
-                                    type="time"
-                                    id="reservationTime"
-                                    value={reservationTime}
-                                    onChange={(e) => setReservationTime(e.target.value)}
-                                    min="12:00"
-                                    max="23:59"
-                                    required
-                                />
-                            </div>
-                            <div className="flex flex-col">
-                                <label htmlFor="reservationDate" className="font-bold">Fecha:</label>
-                                <input
-                                    className="w-fit h-6 rounded"
-                                    type="date"
-                                    id="reservationDate"
-                                    value={reservationDate}
-                                    onChange={(e) => setReservationDate(e.target.value)}
-                                    min={tomorrowFormatted} 
-                                    required
-                                />
-                            </div>
-                            <div className="flex flex-col">
-                                <label htmlFor="numberOfPeople" className="font-bold">Personas:</label>
-                                <input
-                                    className="w-16 h-6 p-2 rounded"
-                                    type="number"
-                                    id="numberOfPeople"
-                                    value={numberOfPeople}
-                                    onChange={(e) => setNumberOfPeople(parseInt(e.target.value))}
-                                    min="1"
-                                    required
-                                />
-                            </div>
-                        </div>
-                        <p className="text-red-700 text-sm">Horario disponible: 12:00 - 23:59</p>
-                        <hr className="w-full h-0.5 bg-gray-300 my-2"/>
-                        <PaymentMethodPicker value={paymentMethod} onChange={setPaymentMethod} />
-                        <hr className="w-full h-0.5 bg-gray-300 my-2"/>
-                        <p className="text-xl font-medium">Precio Total: {totalPrice}€</p>
-                        <button
-                            type="submit"
-                            className="bg-red-700 text-white p-2 rounded"
-                            onClick={handlePaymentClick}
-                            disabled={!isFormValid || isSubmitting}
-                        >
-                            {isSubmitting ? 'Reserva Hecha' : paymentMethod === 'local' ? 'Reservar (pago en el local)' : 'Reservar (demo)'}
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
+  useEffect(() => {
+    const nameOk = nameMode === "self" || guestName.trim().length >= 2;
+    const emailValue = nameMode === "self" ? clientEmail : contactEmail.trim();
+    const emailOk = looksLikeEmail(emailValue);
+    const phoneOk = looksLikePhone(contactPhone);
+    setIsFormValid(
+      Boolean(reservationDate && reservationTime && numberOfPeople >= 1 && nameOk && emailOk && phoneOk)
     );
+  }, [
+    reservationDate,
+    reservationTime,
+    numberOfPeople,
+    nameMode,
+    guestName,
+    contactPhone,
+    contactEmail,
+    clientEmail,
+  ]);
+
+  async function changeQuantity(index, delta) {
+    const item = cartItems[index];
+    if (!item) {
+      return;
+    }
+
+    const nextQty = Math.min(10, Math.max(1, item.quantity + delta));
+    if (nextQty === item.quantity) {
+      return;
+    }
+
+    // Actualizamos la UI al momento y persistimos en el carrito
+    setCartItems((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], quantity: nextQty };
+      return next;
+    });
+
+    try {
+      await updateCartItemQuantity(item.dishId, nextQty);
+      notifyCartChanged();
+    } catch (error) {
+      console.error("Error al actualizar la cantidad:", error);
+      await refreshCartItems();
+    }
+  }
+
+  async function handleDeleteItem(item) {
+    if (!item?.dishId || removingIds.has(item.dishId)) {
+      return;
+    }
+
+    setRemovingIds((prev) => {
+      const next = new Set(prev);
+      next.add(item.dishId);
+      return next;
+    });
+
+    skipRefresh.current = true;
+
+    try {
+      await deleteCartItem(null, item.dishId);
+    } catch (error) {
+      console.error("Error al eliminar el platillo del carrito:", error);
+      setRemovingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(item.dishId);
+        return next;
+      });
+      skipRefresh.current = false;
+      return;
+    }
+
+    // Dejamos que la fila se desvanezca antes de quitarla del DOM
+    window.setTimeout(() => {
+      let nextItems = [];
+      setCartItems((prev) => {
+        nextItems = prev.filter((row) => row.dishId !== item.dishId);
+        return nextItems;
+      });
+      setRemovingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(item.dishId);
+        return next;
+      });
+      setRemovedNotice(item.dishName);
+      clearTimeout(noticeTimer.current);
+      noticeTimer.current = setTimeout(() => setRemovedNotice(""), 7000);
+      // Fuera del setState: la server action no puede correr “mientras” se renderiza
+      void loadSuggestions(nextItems);
+      notifyCartChanged();
+      skipRefresh.current = false;
+    }, 450);
+  }
+
+  async function handleOpenDish(item) {
+    if (!item?.dishId || removingIds.has(item.dishId)) {
+      return;
+    }
+    try {
+      const dish = await getDishById(item.dishId);
+      if (dish) {
+        openDish(dish);
+      }
+    } catch (error) {
+      console.error("Error al abrir el plato:", error);
+    }
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    if (!isFormValid || isSubmitting || cartItems.length === 0) {
+      return;
+    }
+
+    const confirmed = window.confirm("¿Confirmas la reserva?");
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      const reservedName = nameMode === "self" ? clientName : guestName.trim();
+      const reservedEmail = nameMode === "self" ? clientEmail : contactEmail.trim();
+      const formattedDishDetail = cartItems.map((item) => ({
+        dishName: item.dishName,
+        quantity: item.quantity,
+      }));
+
+      await createReservation(
+        userId,
+        formattedDishDetail,
+        totalPrice,
+        reservationDate,
+        reservationTime,
+        numberOfPeople,
+        paymentMethod,
+        reservedName,
+        contactPhone.trim(),
+        reservedEmail
+      );
+
+      const goToReservations = window.confirm(
+        "¡Reserva realizada con éxito! ¿Quieres ir a ver tus reservas?"
+      );
+      notifyCartChanged();
+      if (goToReservations) {
+        window.location.href = "/reservation";
+      } else {
+        setCartItems([]);
+        await loadSuggestions([]);
+      }
+    } catch (error) {
+      console.error("Error al crear la reserva:", error);
+      window.alert("No se pudo completar la reserva. Inténtalo de nuevo.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  const tomorrowFormatted = minReservationDate();
+  const totalUnits = cartItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+
+  return (
+    <div className="bg-cream px-[4%] py-8 sm:py-10 md:px-[6%] md:py-12 lg:px-[8%]">
+      <div className="flex flex-col gap-8 lg:flex-row lg:items-stretch lg:gap-10">
+        <section className="flex min-w-0 flex-1 flex-col lg:w-[58%]">
+          <header className="mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+            <div className="min-w-0 text-left">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-red-800/80">Reserva</p>
+              <h1 className="mt-1.5 text-[clamp(1.5rem,3.5vw,2.15rem)] font-semibold leading-tight text-stone-900">
+                Carrito de {clientName}
+              </h1>
+              <p className="mt-1.5 max-w-lg text-sm text-stone-500 sm:text-base">
+                Revisa tu pedido y completa los datos para reservar mesa.
+              </p>
+            </div>
+            <div className="shrink-0 self-start rounded-2xl border border-stone-200 bg-white px-4 py-3 text-right shadow-sm shadow-stone-900/5 sm:px-5 sm:py-3.5">
+              <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-stone-500">
+                Precio total
+              </p>
+              <p className="mt-0.5 text-xl font-bold text-stone-900 sm:text-2xl">
+                {formatMoney(totalPrice)}
+              </p>
+            </div>
+          </header>
+
+          <div className="flex-1 rounded-2xl border border-stone-200/80 bg-white/70 p-4 shadow-sm shadow-stone-900/5 sm:p-5 md:p-6">
+            <div className="mb-4 flex items-end justify-between gap-3 border-b border-stone-100 pb-3">
+              <h2 className="text-lg font-semibold text-stone-900 sm:text-xl">Tu pedido</h2>
+              <p className="text-sm text-stone-500">
+                {totalUnits === 0
+                  ? "Vacío"
+                  : `${totalUnits} ${totalUnits === 1 ? "plato" : "platos"}`}
+              </p>
+            </div>
+
+            {removedNotice ? (
+              <p className="mb-3 animate-cart-notice-in border-y border-stone-200 py-2.5 text-sm text-stone-700">
+                <span className="font-medium text-red-800">{removedNotice}</span>
+                {" "}
+                se ha eliminado de la cesta.
+              </p>
+            ) : null}
+
+            {cartItems.length === 0 ? (
+              <p className="py-10 text-center text-sm text-stone-500 sm:text-base">
+                {removedNotice
+                  ? "Tu cesta ha quedado vacía."
+                  : "No hay platillos en el carrito. Explora la carta y añade algo rico."}
+              </p>
+            ) : (
+              <ul className="divide-y divide-stone-100">
+                {cartItems.map((item, index) => {
+                  const isRemoving = removingIds.has(item.dishId);
+
+                  return (
+                  <li
+                    key={item.dishId}
+                    className={`flex flex-col gap-3 overflow-hidden py-4 first:pt-1 last:pb-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4 ${
+                      isRemoving ? "animate-cart-row-out pointer-events-none" : ""
+                    }`}
+                  >
+                    <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+                      <div className="inline-flex items-center overflow-hidden rounded-xl border border-stone-200 bg-stone-50">
+                        <button
+                          type="button"
+                          aria-label="Quitar uno"
+                          disabled={isRemoving}
+                          className="px-2.5 py-2 text-sm font-semibold text-red-800 transition hover:bg-red-50 disabled:opacity-50 sm:px-3"
+                          onClick={() => changeQuantity(index, -1)}
+                        >
+                          −
+                        </button>
+                        <span className="min-w-8 px-1 text-center text-sm font-semibold text-stone-900">
+                          {item.quantity}
+                        </span>
+                        <button
+                          type="button"
+                          aria-label="Añadir uno"
+                          disabled={isRemoving}
+                          className="px-2.5 py-2 text-sm font-semibold text-red-800 transition hover:bg-red-50 disabled:opacity-50 sm:px-3"
+                          onClick={() => changeQuantity(index, 1)}
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="flex min-w-0 flex-1 items-center gap-3 text-left sm:gap-4"
+                        onClick={() => handleOpenDish(item)}
+                      >
+                        <img
+                          src={item.dishImage}
+                          alt=""
+                          className="h-14 w-14 shrink-0 rounded-xl object-cover sm:h-16 sm:w-16"
+                        />
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-stone-900 underline-offset-2 hover:underline">
+                            {item.dishName}
+                          </p>
+                          <p className="text-sm text-stone-500">{item.dishCategory}</p>
+                        </div>
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3 sm:justify-end sm:gap-4">
+                      <p className="text-base font-bold text-stone-900 sm:text-lg">
+                        {formatMoney(item.dishPrice * item.quantity)}
+                      </p>
+                      <button
+                        type="button"
+                        aria-label={`Eliminar ${item.dishName}`}
+                        disabled={isRemoving}
+                        className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-red-800 text-white transition hover:bg-red-900 disabled:opacity-50"
+                        onClick={() => handleDeleteItem(item)}
+                      >
+                        <HiOutlineTrash className="h-5 w-5" aria-hidden />
+                      </button>
+                    </div>
+                  </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </section>
+
+        <aside className="flex w-full lg:w-[42%]">
+          <form
+            onSubmit={handleSubmit}
+            className="flex h-full w-full flex-col rounded-2xl border border-stone-200/80 bg-white p-4 shadow-sm shadow-stone-900/5 sm:p-5 md:p-6"
+          >
+            <h2 className="text-lg font-semibold text-stone-900 sm:text-xl">Resumen de la reserva</h2>
+            <p className="mt-1 text-sm text-stone-500">Datos para tu mesa en Taipei</p>
+
+            <fieldset className="mt-5">
+              <legend className="text-sm font-semibold text-stone-800">¿A nombre de quién?</legend>
+              <div className="mt-2.5 grid grid-cols-2 gap-2">
+                <label
+                  className={`flex w-full min-w-0 cursor-pointer items-start gap-2 rounded-xl border px-2.5 py-2.5 transition sm:gap-3 sm:px-3 ${
+                    nameMode === "self" ? "border-red-700 bg-red-50" : "border-stone-200 bg-stone-50/60"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="nameMode"
+                    value="self"
+                    checked={nameMode === "self"}
+                    onChange={() => setNameMode("self")}
+                    className="mt-1 shrink-0 accent-red-800"
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-xs font-medium leading-snug text-stone-800 sm:text-sm">
+                      A nombre del cliente
+                    </span>
+                    <span className="mt-0.5 block text-[0.65rem] text-stone-500 sm:text-xs">
+                      Tu cuenta, sin editar.
+                    </span>
+                  </span>
+                </label>
+
+                <label
+                  className={`flex w-full min-w-0 cursor-pointer items-start gap-2 rounded-xl border px-2.5 py-2.5 transition sm:gap-3 sm:px-3 ${
+                    nameMode === "other" ? "border-red-700 bg-red-50" : "border-stone-200 bg-stone-50/60"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="nameMode"
+                    value="other"
+                    checked={nameMode === "other"}
+                    onChange={() => setNameMode("other")}
+                    className="mt-1 shrink-0 accent-red-800"
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-xs font-medium leading-snug text-stone-800 sm:text-sm">
+                      A nombre de otra persona
+                    </span>
+                    <span className="mt-0.5 block text-[0.65rem] text-stone-500 sm:text-xs">
+                      Para alguien más.
+                    </span>
+                  </span>
+                </label>
+              </div>
+
+              <div className="mt-3">
+                <label htmlFor="guestName" className="text-sm font-semibold text-stone-800">
+                  Nombre
+                </label>
+                {nameMode === "self" ? (
+                  <input
+                    id="guestName"
+                    type="text"
+                    value={clientName}
+                    readOnly
+                    className={`${fieldClass} cursor-default bg-stone-50 text-stone-700`}
+                    tabIndex={-1}
+                  />
+                ) : (
+                  <input
+                    id="guestName"
+                    type="text"
+                    value={guestName}
+                    onChange={(event) => setGuestName(event.target.value)}
+                    placeholder="Nombre y apellidos"
+                    className={fieldClass}
+                    required
+                    autoComplete="name"
+                  />
+                )}
+              </div>
+            </fieldset>
+
+            <div className="mt-4">
+              <div className="grid grid-cols-3 gap-2">
+                <div className="min-w-0">
+                  <label htmlFor="reservationDate" className="text-xs font-semibold text-stone-800">
+                    Fecha
+                  </label>
+                  <input
+                    id="reservationDate"
+                    type="date"
+                    value={reservationDate}
+                    onChange={(event) => setReservationDate(event.target.value)}
+                    min={tomorrowFormatted}
+                    required
+                    className={compactFieldClass}
+                  />
+                </div>
+                <div className="min-w-0">
+                  <label htmlFor="reservationTime" className="text-xs font-semibold text-stone-800">
+                    Hora
+                  </label>
+                  <input
+                    id="reservationTime"
+                    type="time"
+                    value={reservationTime}
+                    onChange={(event) => setReservationTime(event.target.value)}
+                    min="12:00"
+                    max="23:59"
+                    required
+                    className={compactFieldClass}
+                  />
+                </div>
+                <div className="min-w-0">
+                  <label htmlFor="numberOfPeople" className="text-xs font-semibold text-stone-800">
+                    Personas
+                  </label>
+                  <div className="mt-1 flex items-center gap-1">
+                    <button
+                      type="button"
+                      aria-label="Menos personas"
+                      className="flex h-8 w-7 shrink-0 items-center justify-center rounded-lg border border-stone-300 bg-white text-sm font-semibold text-stone-800 transition hover:border-red-700 hover:text-red-800"
+                      onClick={() => setNumberOfPeople((value) => Math.max(1, value - 1))}
+                    >
+                      −
+                    </button>
+                    <input
+                      id="numberOfPeople"
+                      type="number"
+                      value={numberOfPeople}
+                      onChange={(event) => {
+                        const next = Number.parseInt(event.target.value, 10);
+                        setNumberOfPeople(Number.isFinite(next) && next >= 1 ? next : 1);
+                      }}
+                      min="1"
+                      max="20"
+                      required
+                      className={`${compactFieldClass} mt-0 text-center font-semibold`}
+                    />
+                    <button
+                      type="button"
+                      aria-label="Más personas"
+                      className="flex h-8 w-7 shrink-0 items-center justify-center rounded-lg border border-stone-300 bg-white text-sm font-semibold text-stone-800 transition hover:border-red-700 hover:text-red-800"
+                      onClick={() => setNumberOfPeople((value) => Math.min(20, value + 1))}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <p className="mt-1.5 text-[0.65rem] text-red-800/90">Horario disponible: 12:00 – 23:59</p>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="min-w-0">
+                <label htmlFor="contactPhone" className="text-sm font-semibold text-stone-800">
+                  Número de contacto
+                </label>
+                <input
+                  id="contactPhone"
+                  type="tel"
+                  value={contactPhone}
+                  onChange={(event) => setContactPhone(event.target.value)}
+                  placeholder="Ej. 600 123 456"
+                  className={fieldClass}
+                  required
+                  autoComplete="tel"
+                />
+              </div>
+              <div className="min-w-0">
+                <label htmlFor="contactEmail" className="text-sm font-semibold text-stone-800">
+                  Email
+                </label>
+                {nameMode === "self" ? (
+                  <input
+                    id="contactEmail"
+                    type="email"
+                    value={clientEmail}
+                    readOnly
+                    className={`${fieldClass} cursor-default bg-stone-50 text-stone-700`}
+                    tabIndex={-1}
+                  />
+                ) : (
+                  <input
+                    id="contactEmail"
+                    type="email"
+                    value={contactEmail}
+                    onChange={(event) => setContactEmail(event.target.value)}
+                    placeholder="correo@ejemplo.com"
+                    className={fieldClass}
+                    required
+                    autoComplete="email"
+                  />
+                )}
+              </div>
+            </div>
+
+            <div className="mt-4 border-t border-stone-100 pt-4">
+              <PaymentMethodPicker value={paymentMethod} onChange={setPaymentMethod} />
+            </div>
+
+            <div className="mt-auto border-t border-stone-100 pt-5">
+              <button
+                type="submit"
+                disabled={!isFormValid || isSubmitting || cartItems.length === 0}
+                className="w-full rounded-xl bg-red-800 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-900 disabled:cursor-not-allowed disabled:opacity-50 sm:text-base"
+              >
+                {isSubmitting
+                  ? "Reservando…"
+                  : paymentMethod === "local"
+                    ? "Reservar (pago en el local)"
+                    : "Reservar (demo)"}
+              </button>
+            </div>
+          </form>
+        </aside>
+      </div>
+
+      <CartSuggestCarousel dishes={suggestions} onOpenDish={handleOpenDish} />
+
+      {selectedDish ? (
+        <DishPopup dish={selectedDish} onClose={closeDish} onOpenDish={openDish} />
+      ) : null}
+    </div>
+  );
 }

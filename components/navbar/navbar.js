@@ -66,7 +66,7 @@ export default function Navbar() {
             </div>
           </div>
 
-          <div className="absolute inset-y-0 right-0 flex items-center gap-1 pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
+          <div className="absolute inset-y-0 right-0 z-20 flex items-center gap-1 overflow-visible pr-2 sm:static sm:inset-auto sm:ml-6 sm:pr-0">
             <CartButton />
             <UserMenu />
           </div>

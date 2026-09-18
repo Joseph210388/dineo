@@ -37,7 +37,7 @@ function GridDishCard({ dish, onOpen }) {
             {dish.price}
             <span className="text-[0.62em]">€</span>
           </p>
-          <AddToCartButton dishId={dish._id} variant="card" />
+          <AddToCartButton dishId={dish._id} imageUrl={dish.image} variant="card" />
         </div>
       </div>
     </article>
@@ -74,7 +74,7 @@ function ListDishCard({ dish, onOpen }) {
             {dish.price}
             <span className="text-[0.62em]">€</span>
           </p>
-          <AddToCartButton dishId={dish._id} variant="list" />
+          <AddToCartButton dishId={dish._id} imageUrl={dish.image} variant="list" />
         </div>
       </div>
     </article>
