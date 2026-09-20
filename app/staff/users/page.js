@@ -1,11 +1,14 @@
 import { redirect } from "next/navigation";
+import { requireAdmin } from "../../../backend/auth";
 import { listStaffUsers } from "../../../backend/actions/staff";
 import StaffUsersBoard from "../../../components/staff/staff-users-board";
 
 export default async function StaffUsersPage() {
   let users;
+  let admin;
 
   try {
+    admin = await requireAdmin();
     users = await listStaffUsers();
   } catch {
     redirect("/staff");
@@ -18,7 +21,7 @@ export default async function StaffUsersPage() {
           Todavía no hay usuarios.
         </p>
       ) : (
-        <StaffUsersBoard users={users} />
+        <StaffUsersBoard users={users} currentUserId={admin.id} />
       )}
     </main>
   );

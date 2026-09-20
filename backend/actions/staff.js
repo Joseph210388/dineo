@@ -2,6 +2,7 @@
 
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
+import bcrypt from "bcryptjs";
 import { sql } from "../db";
 import { requireAdmin, requireStaff } from "../auth";
 import { getCachedDashboardStats } from "../staff-dashboard";
@@ -438,31 +439,38 @@ export async function createStaffReservationAction(formData) {
   return { ok: true, id: String(reservation.id) };
 }
 
-export async function listStaffUsers() {
-  await requireAdmin();
-
-  const users = await sql`
-    select id, email, first_name, last_name, role, is_active, created_at
-    from users
-    order by created_at desc
-  `;
-
-  return users.map((row) => ({
+function mapStaffUserRow(row, stats = null) {
+  return {
     id: String(row.id),
     email: row.email,
     firstName: row.first_name,
     lastName: row.last_name,
+    photo: row.photo_url || "",
     role: row.role,
     isActive: row.is_active,
     createdAt: row.created_at,
-  }));
+    reservationCount: stats ? Number(stats.reservation_count) : undefined,
+    spent: stats ? Number(stats.spent) : undefined,
+  };
+}
+
+export async function listStaffUsers() {
+  await requireAdmin();
+
+  const users = await sql`
+    select id, email, first_name, last_name, photo_url, role, is_active, created_at
+    from users
+    order by created_at desc
+  `;
+
+  return users.map((row) => mapStaffUserRow(row));
 }
 
 export async function getStaffUser(id) {
   await requireAdmin();
 
   const [row] = await sql`
-    select id, email, first_name, last_name, role, is_active, created_at
+    select id, email, first_name, last_name, photo_url, role, is_active, created_at
     from users
     where id = ${id}
     limit 1
@@ -480,20 +488,151 @@ export async function getStaffUser(id) {
     where user_id = ${id}
   `;
 
-  return {
-    id: String(row.id),
-    email: row.email,
-    firstName: row.first_name,
-    lastName: row.last_name,
-    role: row.role,
-    isActive: row.is_active,
-    createdAt: row.created_at,
-    reservationCount: Number(stats.reservation_count),
-    spent: Number(stats.spent),
-  };
+  return mapStaffUserRow(row, stats);
+}
+
+/** Reservas de un cliente concreto (popup Ver perfil → registros). */
+export async function listStaffUserReservations(userId) {
+  await requireAdmin();
+  const id = String(userId || "");
+  if (!id) {
+    return [];
+  }
+
+  const reservations = await sql`
+    select
+      reservations.id,
+      reservations.reservation_date,
+      reservations.reservation_time,
+      reservations.number_of_people,
+      reservations.total_price,
+      reservations.status,
+      reservations.notes,
+      reservations.payment_method,
+      users.first_name,
+      users.last_name,
+      users.email
+    from reservations
+    inner join users on users.id = reservations.user_id
+    where reservations.user_id = ${id}
+    order by reservations.reservation_date desc, reservations.reservation_time desc
+  `;
+
+  return reservations.map(mapReservationListRow);
 }
 
 export async function updateStaffUserAction(formData) {
+  const result = await saveStaffUserFromForm(formData);
+  if (!result.ok) {
+    return result;
+  }
+  redirect(`/staff/users/${result.id}`);
+}
+
+/** Guarda perfil/rol desde el popup (sin redirect). */
+export async function saveStaffUserPopupAction(payload) {
+  const admin = await requireAdmin();
+  const id = String(payload?.id || "");
+  const firstName = String(payload?.firstName || "").trim();
+  const lastName = String(payload?.lastName || "").trim();
+  const email = String(payload?.email || "").trim().toLowerCase();
+  const role = String(payload?.role || "");
+  const isActive = Boolean(payload?.isActive);
+
+  if (!id || !firstName || !lastName || !email || !USER_ROLES.includes(role)) {
+    return { ok: false, message: "Revisa nombre, correo y rol" };
+  }
+
+  if (id === admin.id && (role !== "admin" || !isActive)) {
+    return { ok: false, message: "No puedes quitarte el acceso de administrador" };
+  }
+
+  try {
+    await sql`
+      update users
+      set
+        first_name = ${firstName},
+        last_name = ${lastName},
+        email = ${email},
+        role = ${role},
+        is_active = ${isActive}
+      where id = ${id}
+    `;
+  } catch (error) {
+    if (String(error?.message || "").toLowerCase().includes("unique")) {
+      return { ok: false, message: "Ese correo ya está en uso" };
+    }
+    return { ok: false, message: "No se pudo guardar el usuario" };
+  }
+
+  refreshStaff();
+  return { ok: true, id };
+}
+
+/** Cambia solo el rol desde la tabla (candado en la propia cuenta). */
+export async function updateStaffUserRoleAction({ id, role }) {
+  const admin = await requireAdmin();
+  const userId = String(id || "");
+  const nextRole = String(role || "");
+
+  if (!userId || !USER_ROLES.includes(nextRole)) {
+    return { ok: false, message: "Rol no válido" };
+  }
+
+  if (userId === admin.id) {
+    return { ok: false, message: "No puedes cambiar el rol de tu propia cuenta" };
+  }
+
+  await sql`update users set role = ${nextRole} where id = ${userId}`;
+  refreshStaff();
+  return { ok: true };
+}
+
+/** El admin fija una contraseña nueva (sin pedir la anterior). */
+export async function setStaffUserPasswordAction({ id, newPassword }) {
+  const admin = await requireAdmin();
+  const userId = String(id || "");
+  const next = String(newPassword || "");
+
+  if (!userId) {
+    return { ok: false, message: "Usuario no válido" };
+  }
+  if (next.length < 8) {
+    return { ok: false, message: "La contraseña debe tener al menos 8 caracteres" };
+  }
+
+  const passwordHash = await bcrypt.hash(next, 12);
+  await sql`update users set password_hash = ${passwordHash} where id = ${userId}`;
+  // Cierra sesiones ajenas; si es la propia, el admin sigue con la cookie actual
+  if (userId !== admin.id) {
+    await sql`delete from sessions where user_id = ${userId}`;
+  }
+  refreshStaff();
+  return { ok: true };
+}
+
+export async function deleteStaffUserAction(formData) {
+  const result = await removeStaffUserPopupAction({ id: formData.get("id") });
+  if (!result.ok) {
+    return result;
+  }
+  redirect("/staff/users");
+}
+
+export async function removeStaffUserPopupAction({ id }) {
+  const admin = await requireAdmin();
+  const userId = String(id || "");
+
+  if (!userId || userId === admin.id) {
+    return { ok: false, message: "No puedes eliminar tu propia cuenta" };
+  }
+
+  await sql`delete from users where id = ${userId}`;
+  refreshStaff();
+  return { ok: true };
+}
+
+async function saveStaffUserFromForm(formData) {
   const admin = await requireAdmin();
   const id = String(formData.get("id") || "");
   const firstName = String(formData.get("firstName") || "").trim();
@@ -516,20 +655,7 @@ export async function updateStaffUserAction(formData) {
   `;
 
   refreshStaff();
-  redirect(`/staff/users/${id}`);
-}
-
-export async function deleteStaffUserAction(formData) {
-  const admin = await requireAdmin();
-  const id = String(formData.get("id") || "");
-
-  if (!id || id === admin.id) {
-    return { ok: false, message: "No puedes eliminar tu propia cuenta" };
-  }
-
-  await sql`delete from users where id = ${id}`;
-  refreshStaff();
-  redirect("/staff/users");
+  return { ok: true, id };
 }
 
 export async function listStaffCatalogs() {

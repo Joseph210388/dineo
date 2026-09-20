@@ -8,8 +8,16 @@ import { createReservation } from "../../backend/actions/reservation";
 import { formatMoney } from "../../backend/staff-format";
 import { CART_CHANGED_EVENT, notifyCartChanged } from "../../lib/cart-events";
 import { DEFAULT_PAYMENT_METHOD } from "../../lib/payment-methods";
+import {
+  DEFAULT_DIETARY,
+  DEFAULT_TABLE_TYPE,
+} from "../../lib/reservation-preferences";
+import { toast } from "../../lib/toast";
 import { useAuth } from "../../components/auth-provider";
-import PaymentMethodPicker from "../../components/payment-method-picker/payment-method-picker";
+import PaymentCheckout from "../../components/payment-method-picker/payment-checkout";
+import CheckoutStepper from "../../components/cart/checkout-stepper";
+import PreferencePicker from "../../components/cart/preference-picker";
+import ReservationSuccess from "../../components/cart/reservation-success";
 import CartSuggestCarousel from "../../components/cart-button/cart-suggest-carousel";
 import DishPopup from "../../components/dish-popup/dish-popup";
 import useDishPopup from "../../components/dish-popup/use-dish-popup";
@@ -51,12 +59,17 @@ export default function Cart() {
   const [reservationTime, setReservationTime] = useState("");
   const [numberOfPeople, setNumberOfPeople] = useState(2);
   const [paymentMethod, setPaymentMethod] = useState(DEFAULT_PAYMENT_METHOD);
+  const [tableType, setTableType] = useState(DEFAULT_TABLE_TYPE);
+  const [dietaryNote, setDietaryNote] = useState(DEFAULT_DIETARY);
+  const [kitchenNote, setKitchenNote] = useState("");
+  const [checkoutStep, setCheckoutStep] = useState(1);
   const [nameMode, setNameMode] = useState("self");
   const [guestName, setGuestName] = useState("");
   const [contactPhone, setContactPhone] = useState("");
   const [contactEmail, setContactEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isFormValid, setIsFormValid] = useState(false);
+  const [reservationDone, setReservationDone] = useState(null);
   const [removingIds, setRemovingIds] = useState(() => new Set());
   const [removedNotice, setRemovedNotice] = useState("");
   const noticeTimer = useRef(null);
@@ -222,15 +235,9 @@ export default function Cart() {
     }
   }
 
-  async function handleSubmit(event) {
-    event.preventDefault();
+  async function completeReservation() {
     if (!isFormValid || isSubmitting || cartItems.length === 0) {
-      return;
-    }
-
-    const confirmed = window.confirm("¿Confirmas la reserva?");
-    if (!confirmed) {
-      return;
+      return false;
     }
 
     try {
@@ -252,29 +259,66 @@ export default function Cart() {
         paymentMethod,
         reservedName,
         contactPhone.trim(),
-        reservedEmail
+        reservedEmail,
+        tableType,
+        dietaryNote,
+        kitchenNote
       );
 
-      const goToReservations = window.confirm(
-        "¡Reserva realizada con éxito! ¿Quieres ir a ver tus reservas?"
-      );
       notifyCartChanged();
-      if (goToReservations) {
-        window.location.href = "/reservation";
-      } else {
-        setCartItems([]);
-        await loadSuggestions([]);
-      }
+      setCheckoutStep(3);
+      setReservationDone({
+        guestName: reservedName,
+        date: reservationDate,
+        time: reservationTime,
+        people: numberOfPeople,
+        total: totalPrice,
+      });
+      setCartItems([]);
+      await loadSuggestions([]);
+      return true;
     } catch (error) {
       console.error("Error al crear la reserva:", error);
-      window.alert("No se pudo completar la reserva. Inténtalo de nuevo.");
+      toast.error("No se pudo completar la reserva. Inténtalo de nuevo.");
+      return false;
     } finally {
       setIsSubmitting(false);
     }
   }
 
+  async function handleSubmit(event) {
+    event.preventDefault();
+    // El envío real ocurre en el paso 2 (pago)
+  }
+
+  function goToPaymentStep() {
+    if (!isFormValid || cartItems.length === 0) {
+      toast.error("Completa los datos de la reserva antes de continuar.");
+      return;
+    }
+    setCheckoutStep(2);
+  }
+
   const tomorrowFormatted = minReservationDate();
   const totalUnits = cartItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+
+  if (reservationDone || checkoutStep === 3) {
+    return (
+      <div className="bg-cream">
+        <div className="mx-auto w-full max-w-lg px-[4%] pt-8 md:px-[6%]">
+          <CheckoutStepper step={3} />
+        </div>
+        <ReservationSuccess
+          guestName={reservationDone?.guestName}
+          date={reservationDone?.date}
+          time={reservationDone?.time}
+          people={reservationDone?.people}
+          total={reservationDone?.total}
+          autoRedirect
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="bg-cream px-[4%] py-8 sm:py-10 md:px-[6%] md:py-12 lg:px-[8%]">
@@ -407,9 +451,18 @@ export default function Cart() {
             onSubmit={handleSubmit}
             className="flex h-full w-full flex-col rounded-2xl border border-stone-200/80 bg-white p-4 shadow-sm shadow-stone-900/5 sm:p-5 md:p-6"
           >
-            <h2 className="text-lg font-semibold text-stone-900 sm:text-xl">Resumen de la reserva</h2>
-            <p className="mt-1 text-sm text-stone-500">Datos para tu mesa en Taipei</p>
+            <CheckoutStepper step={checkoutStep} />
+            <h2 className="text-lg font-semibold text-stone-900 sm:text-xl">
+              {checkoutStep === 1 ? "Datos de la reserva" : "Forma de pago"}
+            </h2>
+            <p className="mt-1 text-sm text-stone-500">
+              {checkoutStep === 1
+                ? "Completa tus datos, mesa y dietética. El pago es el siguiente paso."
+                : "Elige cómo pagar. Tarjeta y Bizum son demo."}
+            </p>
 
+            {checkoutStep === 1 ? (
+              <>
             <fieldset className="mt-5">
               <legend className="text-sm font-semibold text-stone-800">¿A nombre de quién?</legend>
               <div className="mt-2.5 grid grid-cols-2 gap-2">
@@ -603,23 +656,42 @@ export default function Cart() {
               </div>
             </div>
 
-            <div className="mt-4 border-t border-stone-100 pt-4">
-              <PaymentMethodPicker value={paymentMethod} onChange={setPaymentMethod} />
+            <div className="mt-5">
+              <PreferencePicker
+                tableType={tableType}
+                onTableTypeChange={setTableType}
+                dietaryNote={dietaryNote}
+                onDietaryNoteChange={setDietaryNote}
+                kitchenNote={kitchenNote}
+                onKitchenNoteChange={setKitchenNote}
+              />
             </div>
 
             <div className="mt-auto border-t border-stone-100 pt-5">
               <button
-                type="submit"
-                disabled={!isFormValid || isSubmitting || cartItems.length === 0}
+                type="button"
+                disabled={!isFormValid || cartItems.length === 0}
+                onClick={goToPaymentStep}
                 className="w-full rounded-xl bg-red-800 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-900 disabled:cursor-not-allowed disabled:opacity-50 sm:text-base"
               >
-                {isSubmitting
-                  ? "Reservando…"
-                  : paymentMethod === "local"
-                    ? "Reservar (pago en el local)"
-                    : "Reservar (demo)"}
+                Continuar al pago
               </button>
             </div>
+              </>
+            ) : (
+              <div className="mt-5 flex min-h-0 flex-1 flex-col">
+                <PaymentCheckout
+                  value={paymentMethod}
+                  onChange={setPaymentMethod}
+                  totalPrice={totalPrice}
+                  canSubmit={isFormValid && cartItems.length > 0}
+                  isSubmitting={isSubmitting}
+                  onLocalPay={() => completeReservation()}
+                  onDemoPay={() => completeReservation()}
+                  onBack={() => setCheckoutStep(1)}
+                />
+              </div>
+            )}
           </form>
         </aside>
       </div>

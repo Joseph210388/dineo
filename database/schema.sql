@@ -181,6 +181,9 @@ create table if not exists reservations (
   status text not null default 'pending',
   notes text,
   payment_method text not null default 'local',
+  table_type text not null default 'salon',
+  dietary_note text not null default 'none',
+  kitchen_note text not null default '',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint reservations_people_positive check (number_of_people > 0),
@@ -190,6 +193,12 @@ create table if not exists reservations (
   ),
   constraint reservations_payment_method_allowed check (
     payment_method in ('local', 'card', 'bizum')
+  ),
+  constraint reservations_table_type_allowed check (
+    table_type in ('salon', 'ventana', 'reservada', 'barra')
+  ),
+  constraint reservations_dietary_note_allowed check (
+    dietary_note in ('none', 'gluten', 'lactosa', 'marisco', 'frutos_secos', 'otra')
   )
 );
 

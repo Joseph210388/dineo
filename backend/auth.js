@@ -191,3 +191,101 @@ export async function logoutUser() {
   const store = await cookies();
   store.delete(SESSION_COOKIE);
 }
+
+/** Actualiza nombre, email y/o foto del cliente logueado. */
+export async function updateCustomerProfile({ firstName, lastName, email, photoUrl }) {
+  const user = await requireCustomer();
+  const cleanFirst = String(firstName || "").trim();
+  const cleanLast = String(lastName || "").trim();
+  const cleanEmail = String(email || "").trim().toLowerCase();
+  const nextPhoto =
+    photoUrl === undefined ? undefined : photoUrl === null || photoUrl === "" ? null : String(photoUrl);
+
+  if (!cleanFirst || !cleanLast) {
+    throw new Error("El nombre y el apellido son obligatorios");
+  }
+  if (!cleanEmail.includes("@")) {
+    throw new Error("Revisa el correo electrónico");
+  }
+
+  if (cleanEmail !== user.email) {
+    const [taken] = await sql`
+      select id from users where email = ${cleanEmail} and id <> ${user.id} limit 1
+    `;
+    if (taken) {
+      throw new Error("Ese email ya está en uso");
+    }
+  }
+
+  const [row] =
+    nextPhoto === undefined
+      ? await sql`
+          update users
+          set first_name = ${cleanFirst},
+              last_name = ${cleanLast},
+              email = ${cleanEmail}
+          where id = ${user.id}
+          returning id, email, first_name, last_name, photo_url, role
+        `
+      : await sql`
+          update users
+          set first_name = ${cleanFirst},
+              last_name = ${cleanLast},
+              email = ${cleanEmail},
+              photo_url = ${nextPhoto}
+          where id = ${user.id}
+          returning id, email, first_name, last_name, photo_url, role
+        `;
+
+  return toPublicUser(row);
+}
+
+/** Cambia la contraseña tras comprobar la actual. */
+export async function changeCustomerPassword({ currentPassword, newPassword }) {
+  const user = await requireCustomer();
+  const current = String(currentPassword || "");
+  const next = String(newPassword || "");
+
+  if (next.length < 8) {
+    throw new Error("La nueva contraseña debe tener al menos 8 caracteres");
+  }
+
+  const [row] = await sql`
+    select password_hash from users where id = ${user.id} limit 1
+  `;
+  if (!row) {
+    throw new Error("Usuario no encontrado");
+  }
+
+  const matches = await bcrypt.compare(current, row.password_hash);
+  if (!matches) {
+    throw new Error("La contraseña actual no es correcta");
+  }
+
+  const passwordHash = await bcrypt.hash(next, 12);
+  await sql`update users set password_hash = ${passwordHash} where id = ${user.id}`;
+  return { ok: true };
+}
+
+/** Desactiva la cuenta del cliente y cierra todas sus sesiones. */
+export async function deleteCustomerAccount({ password }) {
+  const user = await requireCustomer();
+  const [row] = await sql`
+    select password_hash from users where id = ${user.id} limit 1
+  `;
+  if (!row) {
+    throw new Error("Usuario no encontrado");
+  }
+
+  const matches = await bcrypt.compare(String(password || ""), row.password_hash);
+  if (!matches) {
+    throw new Error("Contraseña incorrecta");
+  }
+
+  await sql`update users set is_active = false where id = ${user.id}`;
+  await sql`delete from sessions where user_id = ${user.id}`;
+
+  const store = await cookies();
+  store.delete(SESSION_COOKIE);
+  return { ok: true };
+}

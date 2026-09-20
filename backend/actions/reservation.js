@@ -4,6 +4,12 @@ import { sql } from "../db";
 import { requireCustomer } from "../auth";
 import { deleteAllCartItems, getCartItems } from "./cart";
 import { DEFAULT_PAYMENT_METHOD, isPaymentMethod } from "../../lib/payment-methods";
+import {
+  DEFAULT_DIETARY,
+  DEFAULT_TABLE_TYPE,
+  isDietaryOption,
+  isTableType,
+} from "../../lib/reservation-preferences";
 
 export async function createReservation(
   _userId,
@@ -15,11 +21,17 @@ export async function createReservation(
   paymentMethod = DEFAULT_PAYMENT_METHOD,
   guestName = "",
   contactPhone = "",
-  contactEmail = ""
+  contactEmail = "",
+  tableType = DEFAULT_TABLE_TYPE,
+  dietaryNote = DEFAULT_DIETARY,
+  kitchenNote = ""
 ) {
   const user = await requireCustomer();
   const items = await getCartItems();
   const method = isPaymentMethod(paymentMethod) ? paymentMethod : DEFAULT_PAYMENT_METHOD;
+  const table = isTableType(tableType) ? tableType : DEFAULT_TABLE_TYPE;
+  const dietary = isDietaryOption(dietaryNote) ? dietaryNote : DEFAULT_DIETARY;
+  const kitchen = String(kitchenNote || "").trim().slice(0, 280);
   const accountName = [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
   const reservedFor = String(guestName || "").trim() || accountName;
   const phone = String(contactPhone || "").trim();
@@ -43,6 +55,9 @@ export async function createReservation(
       total_price,
       status,
       payment_method,
+      table_type,
+      dietary_note,
+      kitchen_note,
       notes
     )
     values (
@@ -53,9 +68,12 @@ export async function createReservation(
       ${totalPrice},
       'confirmed',
       ${method},
+      ${table},
+      ${dietary},
+      ${kitchen},
       ${notes}
     )
-    returning id, reservation_date, reservation_time, number_of_people, total_price, status, payment_method, notes
+    returning id, reservation_date, reservation_time, number_of_people, total_price, status, payment_method, table_type, dietary_note, kitchen_note, notes
   `;
 
   for (const item of items) {
@@ -72,7 +90,18 @@ export async function createReservation(
 export async function getReservationsByUser() {
   const user = await requireCustomer();
   const reservations = await sql`
-    select id, reservation_date, reservation_time, number_of_people, total_price, status, payment_method
+    select
+      id,
+      reservation_date,
+      reservation_time,
+      number_of_people,
+      total_price,
+      status,
+      payment_method,
+      table_type,
+      dietary_note,
+      kitchen_note,
+      notes
     from reservations
     where user_id = ${user.id}
     order by reservation_date desc, reservation_time desc
@@ -81,9 +110,10 @@ export async function getReservationsByUser() {
   const result = [];
   for (const reservation of reservations) {
     const dishes = await sql`
-      select dish_name, quantity
+      select dish_name, quantity, unit_price
       from reservation_items
       where reservation_id = ${reservation.id}
+      order by dish_name
     `;
 
     const reservationDate =
@@ -97,10 +127,16 @@ export async function getReservationsByUser() {
       reservationTime: String(reservation.reservation_time).slice(0, 5),
       numberOfPeople: reservation.number_of_people,
       total_price: Number(reservation.total_price),
+      status: reservation.status,
       paymentMethod: reservation.payment_method || DEFAULT_PAYMENT_METHOD,
+      tableType: reservation.table_type || DEFAULT_TABLE_TYPE,
+      dietaryNote: reservation.dietary_note || DEFAULT_DIETARY,
+      kitchenNote: reservation.kitchen_note || "",
+      notes: reservation.notes || "",
       dishDetail: dishes.map((dish) => ({
         dishName: dish.dish_name,
         quantity: dish.quantity,
+        unitPrice: Number(dish.unit_price),
       })),
     });
   }

@@ -1,7 +1,16 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { getCurrentUser, loginStaffUser, loginUser, logoutUser, registerUser } from "../auth";
+import {
+  changeCustomerPassword,
+  deleteCustomerAccount,
+  getCurrentUser,
+  loginStaffUser,
+  loginUser,
+  logoutUser,
+  registerUser,
+  updateCustomerProfile,
+} from "../auth";
 
 export async function getSessionUser() {
   return getCurrentUser();
@@ -54,4 +63,31 @@ export async function signOutAction() {
 export async function signOutStaffAction() {
   await logoutUser();
   redirect("/acceso-personal");
+}
+
+export async function updateProfileAction(payload) {
+  try {
+    const user = await updateCustomerProfile(payload);
+    return { ok: true, user };
+  } catch (error) {
+    return { ok: false, message: error.message };
+  }
+}
+
+export async function changePasswordAction(payload) {
+  try {
+    await changeCustomerPassword(payload);
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, message: error.message };
+  }
+}
+
+export async function deleteAccountAction(payload) {
+  try {
+    await deleteCustomerAccount(payload);
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, message: error.message };
+  }
 }

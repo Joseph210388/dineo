@@ -77,6 +77,8 @@ pg_dump --schema=public --data-only --no-owner --no-privileges ^
 
 ## Diario de la base
 
+- **2026-09-21** — `reservations.kitchen_note` (nota libre para cocina).
+- **2026-09-21** — `reservations.table_type` y `dietary_note` (mesa y dietética/alérgenos del cliente).
 - **2026-09-03** — Proyecto Supabase `taipei`. Tablas: users, sessions, dishes, dish_ingredients, carts, cart_items, reservations, reservation_items.
 - **2026-09-04** — `recommendation` en dishes; tablas `dish_allergens` y `dish_images`.
 - **2026-09-05** — Catálogos `ingredients` y `allergens` + tablas de enlace. Las tablas viejas de nombres sueltos se dejan, pero la app ya no las usa.

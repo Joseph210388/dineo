@@ -18,7 +18,7 @@ export default function PaymentMethodPicker({
     <fieldset className="min-w-0">
       <legend className="text-sm font-semibold text-stone-800">Forma de pago</legend>
       <p className="mt-1 text-xs text-stone-500">
-        Por defecto se paga en el local. Tarjeta y Bizum son demo; no cobran de verdad.
+        En el local pagas al llegar. Tarjeta y Bizum abren un pago demo (no cobran de verdad).
       </p>
       <div className="mt-3 grid grid-cols-3 gap-2 sm:gap-2.5">
         {PAYMENT_METHODS.map((method) => {
