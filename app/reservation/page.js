@@ -142,6 +142,12 @@ function ReservationCard({ reservation, guestFallback, tone = "upcoming" }) {
           <p className="mt-0.5 text-sm font-medium text-stone-800">
             {paymentMethodLabel(reservation.paymentMethod)}
           </p>
+          <a
+            href={`/api/reservations/${reservation._id}/invoice`}
+            className="mt-2 inline-flex text-xs font-semibold text-red-800 hover:underline"
+          >
+            Descargar factura PDF
+          </a>
         </div>
         <div className="rounded-xl border border-red-200 bg-white px-4 py-2.5 text-right">
           <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-stone-500">Total</p>

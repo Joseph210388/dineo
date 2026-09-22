@@ -227,6 +227,39 @@ create index if not exists reservation_items_reservation_id_idx on reservation_i
 create index if not exists reservation_items_dish_id_idx on reservation_items (dish_id);
 
 -- ---------------------------------------------------------------------------
+-- Blog del local (noticias, promos, platos destacados, eventos)
+-- ---------------------------------------------------------------------------
+create table if not exists posts (
+  id bigint generated always as identity primary key,
+  title text not null,
+  slug text not null,
+  excerpt text not null default '',
+  body text not null,
+  cover_image_url text,
+  kind text not null default 'news',
+  status text not null default 'draft',
+  author_id bigint references users(id) on delete set null,
+  published_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint posts_slug_unique unique (slug),
+  constraint posts_kind_allowed check (kind in ('news', 'promo', 'dish', 'event')),
+  constraint posts_status_allowed check (status in ('draft', 'published')),
+  constraint posts_title_not_empty check (char_length(trim(title)) > 0),
+  constraint posts_body_not_empty check (char_length(trim(body)) > 0)
+);
+
+create trigger posts_set_updated_at
+before update on posts
+for each row
+execute function set_updated_at();
+
+create index if not exists posts_status_published_at_idx
+  on posts (status, published_at desc);
+
+create index if not exists posts_kind_idx on posts (kind);
+
+-- ---------------------------------------------------------------------------
 -- Cerrar la API pública de Supabase (PostgREST) si esos roles existen.
 -- En un Postgres normal (Neon, VPS, local) este bloque no hace nada.
 -- El frontend NO habla con Supabase: solo el backend Next.js con DATABASE_URL.
@@ -247,6 +280,8 @@ begin
     revoke all on table cart_items from anon, authenticated;
     revoke all on table reservations from anon, authenticated;
     revoke all on table reservation_items from anon, authenticated;
+    revoke all on table posts from anon, authenticated;
+    revoke all on table categories from anon, authenticated;
   end if;
 end $$;
 
@@ -263,3 +298,4 @@ alter table carts enable row level security;
 alter table cart_items enable row level security;
 alter table reservations enable row level security;
 alter table reservation_items enable row level security;
+alter table posts enable row level security;

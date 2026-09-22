@@ -249,7 +249,7 @@ export default function Cart() {
         quantity: item.quantity,
       }));
 
-      await createReservation(
+      const created = await createReservation(
         userId,
         formattedDishDetail,
         totalPrice,
@@ -268,6 +268,7 @@ export default function Cart() {
       notifyCartChanged();
       setCheckoutStep(3);
       setReservationDone({
+        id: created?._id || created?.id || null,
         guestName: reservedName,
         date: reservationDate,
         time: reservationTime,
@@ -309,6 +310,7 @@ export default function Cart() {
           <CheckoutStepper step={3} />
         </div>
         <ReservationSuccess
+          reservationId={reservationDone?.id}
           guestName={reservationDone?.guestName}
           date={reservationDone?.date}
           time={reservationDone?.time}

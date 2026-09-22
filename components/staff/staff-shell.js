@@ -14,6 +14,7 @@ import {
   HiOutlineX,
   HiOutlineCog,
   HiOutlineChevronUp,
+  HiOutlineNewspaper,
 } from "react-icons/hi";
 import Logo from "../../public/icons/logo.png";
 import { signOutStaffAction } from "../../backend/actions/user";
@@ -24,6 +25,7 @@ function mainNavItems(isAdmin) {
   const items = [
     { href: "/staff", label: "Resumen", icon: HiOutlineHome, exact: true },
     { href: "/staff/dishes", label: "Carta", icon: HiOutlineBookOpen },
+    { href: "/staff/blog", label: "Blog", icon: HiOutlineNewspaper },
     { href: "/staff/reservations", label: "Reservas", icon: HiOutlineCalendar },
   ];
 

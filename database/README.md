@@ -1,6 +1,15 @@
 # Base de datos DINEO / Taipei
 
-Supabase es solo el **host de Postgres** de ahora. La app no usa Auth, Storage ni la API de Supabase. El backend se conecta con `DATABASE_URL`.
+Supabase es el **host de Postgres** y ahora también **Storage** (fotos). La app no usa Auth de Supabase. El backend se conecta a Postgres con `DATABASE_URL` y a Storage con `SUPABASE_SERVICE_ROLE_KEY` (solo servidor).
+
+Buckets públicos (lectura abierta; escritura solo con service_role desde Next):
+
+| Bucket | Uso |
+|---|---|
+| `dishes` | Fotos de la carta (máx. 5 MB) |
+| `avatars` | Fotos de perfil (máx. 2 MB) |
+
+Migración de referencia: `migrations/20260921181500_storage_dishes_avatars.sql`.
 
 Cuando toque mudarse a otro servidor (Neon, Railway, un VPS, Postgres local), este folder es la copia de seguridad del diseño.
 
@@ -77,6 +86,8 @@ pg_dump --schema=public --data-only --no-owner --no-privileges ^
 
 ## Diario de la base
 
+- **2026-09-21** — Tabla `posts` (blog) + bucket Storage `blog`.
+- **2026-09-21** — Storage: buckets `dishes` y `avatars` + policies de lectura pública.
 - **2026-09-21** — `reservations.kitchen_note` (nota libre para cocina).
 - **2026-09-21** — `reservations.table_type` y `dietary_note` (mesa y dietética/alérgenos del cliente).
 - **2026-09-03** — Proyecto Supabase `taipei`. Tablas: users, sessions, dishes, dish_ingredients, carts, cart_items, reservations, reservation_items.

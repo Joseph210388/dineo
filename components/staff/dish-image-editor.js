@@ -10,7 +10,8 @@ import {
   HiOutlineTrash,
   HiOutlineUpload,
 } from "react-icons/hi";
-import { fileToCompressedDataUrl } from "../../lib/image-file";
+import { uploadImage } from "../../backend/actions/storage";
+import { fileToCompressedJpegFile } from "../../lib/image-file";
 
 function buildInitialImages(mainImage, extraImages) {
   const list = [mainImage, ...(extraImages || [])].map((item) => String(item || "").trim()).filter(Boolean);
@@ -25,6 +26,7 @@ export default function DishImageEditor({ mainImage = "", extraImages = [], comp
   const [urlOpen, setUrlOpen] = useState(false);
   const [urlValue, setUrlValue] = useState("");
   const [message, setMessage] = useState("");
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     const next = buildInitialImages(mainImage, extraImages);
@@ -65,14 +67,26 @@ export default function DishImageEditor({ mainImage = "", extraImages = [], comp
   async function onFileChange(event) {
     const file = event.target.files?.[0];
     event.target.value = "";
-    if (!file) {
+    if (!file || uploading) {
       return;
     }
+    setUploading(true);
+    setMessage("");
     try {
-      const dataUrl = await fileToCompressedDataUrl(file);
-      addImage(dataUrl);
+      // Comprimimos en el navegador y subimos el archivo a Supabase Storage
+      const jpeg = await fileToCompressedJpegFile(file);
+      const body = new FormData();
+      body.set("file", jpeg);
+      body.set("folder", "dishes");
+      const result = await uploadImage(body);
+      if (!result.ok || !result.url) {
+        throw new Error(result.error || "No se pudo subir la imagen");
+      }
+      addImage(result.url);
     } catch (error) {
       showError(error.message || "No se pudo subir la imagen");
+    } finally {
+      setUploading(false);
     }
   }
 
@@ -140,11 +154,12 @@ export default function DishImageEditor({ mainImage = "", extraImages = [], comp
         <div className="pointer-events-none absolute inset-0 hidden items-center justify-center gap-2 bg-stone-900/55 opacity-0 transition sm:flex sm:group-hover:pointer-events-auto sm:group-hover:opacity-100 sm:group-focus-within:pointer-events-auto sm:group-focus-within:opacity-100">
           <button
             type="button"
+            disabled={uploading}
             onClick={() => fileRef.current?.click()}
-            className="pointer-events-auto inline-flex items-center gap-1.5 rounded-xl bg-cream px-3 py-2 text-xs font-semibold text-stone-800 hover:bg-white"
+            className="pointer-events-auto inline-flex items-center gap-1.5 rounded-xl bg-cream px-3 py-2 text-xs font-semibold text-stone-800 hover:bg-white disabled:opacity-60"
           >
             <HiOutlineUpload className="h-4 w-4" />
-            Subir
+            {uploading ? "Subiendo…" : "Subir"}
           </button>
           <button
             type="button"
@@ -215,11 +230,12 @@ export default function DishImageEditor({ mainImage = "", extraImages = [], comp
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
+          disabled={uploading}
           onClick={() => fileRef.current?.click()}
-          className="inline-flex items-center gap-1 rounded-lg border border-stone-300 bg-cream px-2.5 py-1.5 text-xs font-medium text-stone-700 hover:bg-stone-100 sm:hidden"
+          className="inline-flex items-center gap-1 rounded-lg border border-stone-300 bg-cream px-2.5 py-1.5 text-xs font-medium text-stone-700 hover:bg-stone-100 disabled:opacity-60 sm:hidden"
         >
           <HiOutlineUpload className="h-3.5 w-3.5" />
-          Subir
+          {uploading ? "Subiendo…" : "Subir"}
         </button>
         <button
           type="button"
@@ -234,11 +250,12 @@ export default function DishImageEditor({ mainImage = "", extraImages = [], comp
         </button>
         <button
           type="button"
+          disabled={uploading}
           onClick={() => fileRef.current?.click()}
-          className="hidden items-center gap-1 rounded-lg border border-stone-300 bg-cream px-2.5 py-1.5 text-xs font-medium text-stone-700 hover:bg-stone-100 sm:inline-flex"
+          className="hidden items-center gap-1 rounded-lg border border-stone-300 bg-cream px-2.5 py-1.5 text-xs font-medium text-stone-700 hover:bg-stone-100 disabled:opacity-60 sm:inline-flex"
         >
           <HiOutlinePlus className="h-3.5 w-3.5" />
-          Añadir foto
+          {uploading ? "Subiendo…" : "Añadir foto"}
         </button>
         {images.length ? (
           <>
@@ -284,6 +301,7 @@ export default function DishImageEditor({ mainImage = "", extraImages = [], comp
         </div>
       ) : null}
 
+      {uploading ? <p className="text-xs text-stone-600">Subiendo a Storage…</p> : null}
       {message ? <p className="text-xs text-red-700">{message}</p> : null}
       {!images.length ? (
         <p className="text-xs text-stone-500">Hace falta al menos una foto (subida o URL) para guardar.</p>

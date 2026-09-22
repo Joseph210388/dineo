@@ -37,7 +37,15 @@ export default async function StaffReservationDetailPage({ params }) {
             {formatDate(reservation.date)} · {reservation.time} · {reservation.people} personas
           </p>
         </div>
-        <ReservationBadge status={reservation.status} />
+        <div className="flex flex-wrap items-center gap-2">
+          <a
+            href={`/api/reservations/${reservation.id}/invoice`}
+            className="rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50"
+          >
+            Descargar PDF
+          </a>
+          <ReservationBadge status={reservation.status} />
+        </div>
       </div>
 
       <section className="mt-6 grid gap-3 sm:grid-cols-2">

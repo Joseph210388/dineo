@@ -1,17 +1,38 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   HiOutlineClock,
   HiOutlineLocationMarker,
   HiOutlineNewspaper,
   HiOutlinePhone,
 } from "react-icons/hi";
+import { listPublishedPosts } from "../../backend/actions/blog";
+import { formatDate } from "../../backend/staff-format";
+import { postKindLabel } from "../../lib/blog";
 import { SITE } from "../../lib/site-info";
 
 /**
- * Columna derecha del expediente: cómo llegar + hueco para notas/promos del local.
+ * Columna derecha del expediente: cómo llegar + últimas entradas del blog.
  */
 export default function ReservationAside() {
+  const [posts, setPosts] = useState([]);
+
+  useEffect(() => {
+    let alive = true;
+    listPublishedPosts({ limit: 3 })
+      .then((list) => {
+        if (alive) setPosts(Array.isArray(list) ? list : []);
+      })
+      .catch(() => {
+        if (alive) setPosts([]);
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   return (
     <aside className="flex w-full flex-col gap-4 lg:sticky lg:top-24 lg:w-full">
       <section className="overflow-hidden rounded-2xl border border-stone-200/90 bg-white shadow-sm shadow-stone-900/5">
@@ -49,7 +70,6 @@ export default function ReservationAside() {
             </div>
           </div>
 
-          {/* Mapa estático/enlace: sin API de mapas en la demo */}
           <a
             href={SITE.mapsUrl}
             target="_blank"
@@ -79,21 +99,43 @@ export default function ReservationAside() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-dashed border-stone-300 bg-white/70 px-4 py-4 sm:px-5">
+      <section className="rounded-2xl border border-stone-200/90 bg-white px-4 py-4 shadow-sm shadow-stone-900/5 sm:px-5">
         <div className="flex items-start gap-2.5">
-          <HiOutlineNewspaper className="mt-0.5 h-5 w-5 shrink-0 text-stone-400" aria-hidden />
-          <div className="min-w-0">
-            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-stone-400">
+          <HiOutlineNewspaper className="mt-0.5 h-5 w-5 shrink-0 text-red-800" aria-hidden />
+          <div className="min-w-0 flex-1">
+            <p className="text-[0.65rem] font-semibold uppercase tracking-[0.16em] text-red-800/80">
               Del local
             </p>
-            <h2 className="mt-1 text-base font-semibold text-stone-800">Notas y promociones</h2>
-            <p className="mt-2 text-sm leading-relaxed text-stone-500">
-              Próximamente el equipo de Taipei podrá publicar aquí avisos del local, notas de
-              platos de temporada y promociones. Aún no está conectado a la base de datos.
-            </p>
-            <p className="mt-3 inline-flex rounded-full bg-stone-100 px-2.5 py-1 text-[0.65rem] font-semibold uppercase tracking-wide text-stone-500">
-              Próximamente
-            </p>
+            <h2 className="mt-1 text-base font-semibold text-stone-900">Notas y promociones</h2>
+
+            {posts.length === 0 ? (
+              <p className="mt-2 text-sm leading-relaxed text-stone-500">
+                Cuando el equipo publique en el blog, las últimas entradas aparecerán aquí.
+              </p>
+            ) : (
+              <ul className="mt-3 space-y-3">
+                {posts.map((post) => (
+                  <li key={post.id}>
+                    <Link
+                      href={`/blog/${post.slug}`}
+                      className="block rounded-xl border border-stone-100 bg-cream/50 px-3 py-2.5 transition hover:border-red-800/30"
+                    >
+                      <p className="text-[0.65rem] font-semibold uppercase tracking-wide text-stone-500">
+                        {postKindLabel(post.kind)} · {formatDate(post.publishedAt || post.createdAt)}
+                      </p>
+                      <p className="mt-0.5 text-sm font-semibold text-stone-900">{post.title}</p>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <Link
+              href="/blog"
+              className="mt-3 inline-flex text-sm font-semibold text-red-800 hover:underline"
+            >
+              Ver todo el blog
+            </Link>
           </div>
         </div>
       </section>

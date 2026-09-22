@@ -11,6 +11,7 @@ const REDIRECT_SECONDS = 10;
  * Paso 3: agradecimiento y redirección automática al historial de reservas.
  */
 export default function ReservationSuccess({
+  reservationId = null,
   guestName = "",
   date = "",
   time = "",
@@ -101,6 +102,14 @@ export default function ReservationSuccess({
         ) : null}
 
         <div className="mt-6 flex flex-col items-stretch gap-3 sm:mx-auto sm:max-w-sm">
+          {reservationId ? (
+            <a
+              href={`/api/reservations/${reservationId}/invoice`}
+              className="inline-flex w-full items-center justify-center rounded-xl border border-red-800/30 bg-white px-5 py-3 text-sm font-semibold text-red-900 transition hover:bg-red-50"
+            >
+              Descargar factura PDF
+            </a>
+          ) : null}
           <Link
             href="/reservation"
             className="inline-flex w-full items-center justify-center rounded-xl bg-red-800 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-red-900 sm:text-base"

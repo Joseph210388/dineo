@@ -31,7 +31,7 @@ export async function middleware(request: NextRequest) {
 
   // Personal: no mezclar con la web de clientes; solo panel (o login si aún no hay sesión)
   if (staffSession) {
-    if (isStaffPath(pathname)) {
+    if (isStaffPath(pathname) || pathname.startsWith("/api/")) {
       return continueWithPath(request);
     }
     return NextResponse.redirect(new URL(STAFF_HOME_PATH, request.url));

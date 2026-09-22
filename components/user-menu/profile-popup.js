@@ -7,7 +7,8 @@ import {
   deleteAccountAction,
   updateProfileAction,
 } from "../../backend/actions/user";
-import { fileToCompressedDataUrl } from "../../lib/image-file";
+import { uploadImage } from "../../backend/actions/storage";
+import { fileToCompressedJpegFile } from "../../lib/image-file";
 import { useAuth } from "../auth-provider";
 import ConfirmPopup from "../popup/confirm-popup";
 import Popup from "../popup/popup";
@@ -45,6 +46,7 @@ export default function ProfilePopup({ isOpen, onClose }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   useEffect(() => {
     if (!isOpen || !user) {
@@ -70,21 +72,30 @@ export default function ProfilePopup({ isOpen, onClose }) {
   async function handlePhotoChange(event) {
     const file = event.target.files?.[0];
     event.target.value = "";
-    if (!file) {
+    if (!file || uploadingPhoto) {
       return;
     }
 
     setError("");
+    setUploadingPhoto(true);
     try {
-      // Avatar pequeño: menos peso en Postgres (demo sin Storage)
-      const dataUrl = await fileToCompressedDataUrl(file, {
+      const jpeg = await fileToCompressedJpegFile(file, {
         maxSide: 480,
         quality: 0.8,
         maxBytes: 450_000,
       });
-      setPhotoUrl(dataUrl);
+      const body = new FormData();
+      body.set("file", jpeg);
+      body.set("folder", "avatars");
+      const result = await uploadImage(body);
+      if (!result.ok || !result.url) {
+        throw new Error(result.error || "No se pudo subir la foto");
+      }
+      setPhotoUrl(result.url);
     } catch (err) {
       setError(err.message || "No se pudo cargar la foto");
+    } finally {
+      setUploadingPhoto(false);
     }
   }
 
@@ -189,9 +200,10 @@ export default function ProfilePopup({ isOpen, onClose }) {
                   )}
                   <button
                     type="button"
+                    disabled={uploadingPhoto}
                     onClick={() => fileInputRef.current?.click()}
-                    className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-full bg-stone-900 text-white shadow"
-                    aria-label="Cambiar foto"
+                    className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-full bg-stone-900 text-white shadow disabled:opacity-60"
+                    aria-label={uploadingPhoto ? "Subiendo foto" : "Cambiar foto"}
                   >
                     <HiOutlineCamera className="h-4 w-4" aria-hidden />
                   </button>
@@ -203,7 +215,9 @@ export default function ProfilePopup({ isOpen, onClose }) {
                     onChange={handlePhotoChange}
                   />
                 </div>
-                <p className="text-center text-xs text-stone-500">JPG o PNG. Se guarda comprimida.</p>
+                <p className="text-center text-xs text-stone-500">
+                  {uploadingPhoto ? "Subiendo a Storage…" : "JPG o PNG. Se guarda en Storage."}
+                </p>
                 {photoUrl ? (
                   <button
                     type="button"
