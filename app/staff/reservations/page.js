@@ -13,8 +13,6 @@ export default async function StaffReservationsPage({ searchParams }) {
         stats={data.stats}
         tables={data.tables}
         reservations={data.reservations}
-        customers={data.customers}
-        dishes={data.dishes}
       />
     </main>
   );

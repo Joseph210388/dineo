@@ -78,8 +78,8 @@ function createSql() {
 
   const client = postgres(connectionUrlForRuntime(connectionUrl), {
     ssl: "require",
-    // En Vercel cada instancia atiende pocas peticiones; en local varias a la vez se encolaban con max: 1
-    max: isServerless ? 1 : 8,
+    // En Vercel pocas conexiones en paralelo (Promise.all de 2–3 queries); en local un poco más
+    max: isServerless ? 3 : 8,
     idle_timeout: isServerless ? 20 : 20,
     // Evita reutilizar sockets que el pooler ya cerro (en el navegador se veia "Connection closed")
     max_lifetime: isServerless ? 60 * 5 : 0,

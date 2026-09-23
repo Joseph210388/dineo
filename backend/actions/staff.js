@@ -577,21 +577,10 @@ export async function getStaffReservationsPageData(dateText) {
       ? dateText
       : new Date().toISOString().slice(0, 10);
 
-  const [dayReservations, tables, customerRows, dishRows] = await Promise.all([
+  // Solo lo necesario para pintar el día; carta/clientes van al abrir el popup
+  const [dayReservations, tables] = await Promise.all([
     loadReservationsForDate(day),
     listActiveTables(),
-    sql`
-      select id, email, first_name, last_name
-      from users
-      where role = 'customer' and is_active = true
-      order by first_name, last_name
-    `,
-    sql`
-      select id, name, price
-      from dishes
-      where is_available = true
-      order by name
-    `,
   ]);
 
   const activeDay = dayReservations.filter((item) => item.status !== "cancelled");
@@ -625,6 +614,31 @@ export async function getStaffReservationsPageData(dateText) {
       availableTables: Math.max(0, tables.length - reservedTableIds.size),
     },
     tables: tablesWithStatus,
+  };
+}
+
+/** Catálogo del popup «Nueva reserva»: se pide solo al abrirlo, no en cada visita al día. */
+export async function getStaffNewReservationCatalogAction() {
+  await requireStaff();
+
+  const [customerRows, dishRows] = await Promise.all([
+    sql`
+      select id, email, first_name, last_name
+      from users
+      where role = 'customer' and is_active = true
+      order by first_name, last_name
+      limit 200
+    `,
+    sql`
+      select id, name, price
+      from dishes
+      where is_available = true
+      order by name
+      limit 200
+    `,
+  ]);
+
+  return {
     customers: customerRows.map((row) => ({
       id: String(row.id),
       email: row.email,

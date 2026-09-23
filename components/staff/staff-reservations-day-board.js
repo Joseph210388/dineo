@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   HiOutlineChevronLeft,
@@ -11,7 +11,10 @@ import {
 import StaffLink from "./staff-link";
 import { ReservationBadge } from "./status-badge";
 import StaffNewReservationPopup from "./staff-new-reservation-popup";
-import { deleteReservationAction } from "../../backend/actions/staff";
+import {
+  deleteReservationAction,
+  getStaffNewReservationCatalogAction,
+} from "../../backend/actions/staff";
 import { formatDurationLabel } from "../../lib/reservation-duration";
 import {
   listOpenHourOptions,
@@ -19,6 +22,7 @@ import {
   RESTAURANT_OPEN_TIME,
   RESTAURANT_CLOSE_TIME,
 } from "../../lib/restaurant-hours";
+import { TABLE_PAGE_SIZE } from "../../lib/search-text";
 
 const HOUR_OPTIONS = listOpenHourOptions();
 const VIEW_ALL_DAY = "all";
@@ -55,24 +59,31 @@ function defaultViewHour() {
   return HOUR_OPTIONS[0] || VIEW_ALL_DAY;
 }
 
-export default function StaffReservationsDayBoard({
-  date,
-  stats,
-  tables,
-  reservations,
-  customers,
-  dishes,
-}) {
+export default function StaffReservationsDayBoard({ date, stats, tables, reservations }) {
   const router = useRouter();
   const [popupOpen, setPopupOpen] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [viewHour, setViewHour] = useState(defaultViewHour);
   const [hoveredTableId, setHoveredTableId] = useState(null);
+  const [listPage, setListPage] = useState(1);
+  const [catalog, setCatalog] = useState({ customers: [], dishes: [] });
+  const [catalogStatus, setCatalogStatus] = useState("idle");
 
   const activeList = useMemo(
     () => reservations.filter((item) => item.status !== "cancelled"),
     [reservations]
   );
+
+  const listPageCount = Math.max(1, Math.ceil(reservations.length / TABLE_PAGE_SIZE));
+  const safeListPage = Math.min(listPage, listPageCount);
+  const pagedReservations = useMemo(() => {
+    const start = (safeListPage - 1) * TABLE_PAGE_SIZE;
+    return reservations.slice(start, start + TABLE_PAGE_SIZE);
+  }, [reservations, safeListPage]);
+
+  useEffect(() => {
+    setListPage(1);
+  }, [date, reservations.length]);
 
   const tablesAtHour = useMemo(() => {
     return tables.map((table) => {
@@ -99,6 +110,24 @@ export default function StaffReservationsDayBoard({
 
   function goToDate(nextDate) {
     router.push(`/staff/reservations?date=${nextDate}`);
+  }
+
+  async function openNewReservation() {
+    setPopupOpen(true);
+    if (catalogStatus === "ready" || catalogStatus === "loading") return;
+    setCatalogStatus("loading");
+    try {
+      const data = await getStaffNewReservationCatalogAction();
+      setCatalog({
+        customers: Array.isArray(data?.customers) ? data.customers : [],
+        dishes: Array.isArray(data?.dishes) ? data.dishes : [],
+      });
+      setCatalogStatus("ready");
+    } catch (error) {
+      console.error("Catálogo nueva reserva:", error);
+      setCatalog({ customers: [], dishes: [] });
+      setCatalogStatus("error");
+    }
   }
 
   async function handleDelete(id) {
@@ -149,7 +178,7 @@ export default function StaffReservationsDayBoard({
 
         <button
           type="button"
-          onClick={() => setPopupOpen(true)}
+          onClick={openNewReservation}
           className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-red-800 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-red-900"
         >
           <HiOutlinePlus className="h-4 w-4" />
@@ -319,73 +348,103 @@ export default function StaffReservationsDayBoard({
               No hay reservas este día. Pulsa «Nueva reserva» para crear una.
             </p>
           ) : (
-            <div className="mt-4 overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="border-b border-stone-100 text-[0.65rem] uppercase tracking-wide text-stone-500">
-                  <tr>
-                    <th className="pb-2 pr-3 font-semibold">Franja</th>
-                    <th className="pb-2 pr-3 font-semibold">Cliente</th>
-                    <th className="pb-2 pr-3 font-semibold">Mesa</th>
-                    <th className="pb-2 pr-3 font-semibold">Pers.</th>
-                    <th className="pb-2 pr-3 font-semibold">Estado</th>
-                    <th className="pb-2 font-semibold"> </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-stone-100">
-                  {reservations.map((reservation) => (
-                    <tr key={reservation.id} className="align-middle">
-                      <td className="py-3 pr-3">
-                        <p className="font-semibold tabular-nums text-stone-900">
-                          {reservation.timeRangeLabel || reservation.time}
-                        </p>
-                        {reservation.durationMinutes ? (
-                          <p className="text-[0.65rem] text-stone-500">
-                            {formatDurationLabel(reservation.durationMinutes)}
-                          </p>
-                        ) : null}
-                      </td>
-                      <td className="py-3 pr-3">
-                        <p className="font-medium text-stone-800">{reservation.guestName}</p>
-                        <p className="truncate text-xs text-stone-500">{reservation.guestEmail}</p>
-                      </td>
-                      <td className="py-3 pr-3 tabular-nums text-stone-700">
-                        {reservation.tableNumber ?? "—"}
-                      </td>
-                      <td className="py-3 pr-3 tabular-nums text-stone-700">{reservation.people}</td>
-                      <td className="py-3 pr-3">
-                        <ReservationBadge status={reservation.status} />
-                      </td>
-                      <td className="py-3">
-                        <div className="flex items-center justify-end gap-2">
-                          <StaffLink
-                            href={`/staff/reservations/${reservation.id}`}
-                            className="text-xs font-semibold text-red-800 hover:underline"
-                          >
-                            Ver
-                          </StaffLink>
-                          <button
-                            type="button"
-                            disabled={deletingId === reservation.id}
-                            onClick={() => handleDelete(reservation.id)}
-                            className="text-xs font-semibold text-stone-500 hover:text-red-800 disabled:opacity-50"
-                          >
-                            Borrar
-                          </button>
-                        </div>
-                      </td>
+            <>
+              <div className="mt-4 overflow-x-auto">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="border-b border-stone-100 text-[0.65rem] uppercase tracking-wide text-stone-500">
+                    <tr>
+                      <th className="pb-2 pr-3 font-semibold">Franja</th>
+                      <th className="pb-2 pr-3 font-semibold">Cliente</th>
+                      <th className="pb-2 pr-3 font-semibold">Mesa</th>
+                      <th className="pb-2 pr-3 font-semibold">Pers.</th>
+                      <th className="pb-2 pr-3 font-semibold">Estado</th>
+                      <th className="pb-2 font-semibold"> </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-stone-100">
+                    {pagedReservations.map((reservation) => (
+                      <tr key={reservation.id} className="align-middle">
+                        <td className="py-3 pr-3">
+                          <p className="font-semibold tabular-nums text-stone-900">
+                            {reservation.timeRangeLabel || reservation.time}
+                          </p>
+                          {reservation.durationMinutes ? (
+                            <p className="text-[0.65rem] text-stone-500">
+                              {formatDurationLabel(reservation.durationMinutes)}
+                            </p>
+                          ) : null}
+                        </td>
+                        <td className="py-3 pr-3">
+                          <p className="font-medium text-stone-800">{reservation.guestName}</p>
+                          <p className="truncate text-xs text-stone-500">{reservation.guestEmail}</p>
+                        </td>
+                        <td className="py-3 pr-3 tabular-nums text-stone-700">
+                          {reservation.tableNumber ?? "—"}
+                        </td>
+                        <td className="py-3 pr-3 tabular-nums text-stone-700">{reservation.people}</td>
+                        <td className="py-3 pr-3">
+                          <ReservationBadge status={reservation.status} />
+                        </td>
+                        <td className="py-3">
+                          <div className="flex items-center justify-end gap-2">
+                            <StaffLink
+                              href={`/staff/reservations/${reservation.id}`}
+                              className="text-xs font-semibold text-red-800 hover:underline"
+                            >
+                              Ver
+                            </StaffLink>
+                            <button
+                              type="button"
+                              disabled={deletingId === reservation.id}
+                              onClick={() => handleDelete(reservation.id)}
+                              className="text-xs font-semibold text-stone-500 hover:text-red-800 disabled:opacity-50"
+                            >
+                              Borrar
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {listPageCount > 1 ? (
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-stone-100 pt-3">
+                  <p className="text-xs text-stone-500">
+                    Página {safeListPage} de {listPageCount} · {reservations.length} reservas
+                  </p>
+                  <div className="inline-flex items-center gap-1">
+                    <button
+                      type="button"
+                      disabled={safeListPage <= 1}
+                      onClick={() => setListPage((page) => Math.max(1, page - 1))}
+                      className="rounded-lg border border-stone-200 px-2.5 py-1.5 text-xs font-semibold text-stone-700 hover:bg-stone-50 disabled:opacity-40"
+                    >
+                      Anterior
+                    </button>
+                    <button
+                      type="button"
+                      disabled={safeListPage >= listPageCount}
+                      onClick={() => setListPage((page) => Math.min(listPageCount, page + 1))}
+                      className="rounded-lg border border-stone-200 px-2.5 py-1.5 text-xs font-semibold text-stone-700 hover:bg-stone-50 disabled:opacity-40"
+                    >
+                      Siguiente
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </>
           )}
         </section>
       </div>
 
       <StaffNewReservationPopup
         isOpen={popupOpen}
-        customers={customers}
-        dishes={dishes}
+        catalogLoading={catalogStatus === "loading"}
+        catalogError={catalogStatus === "error"}
+        customers={catalog.customers}
+        dishes={catalog.dishes}
         tables={tables}
         defaultDate={date}
         onCreated={() => {

@@ -38,6 +38,8 @@ export default function StaffNewReservationPopup({
   tables,
   defaultDate,
   onCreated,
+  catalogLoading = false,
+  catalogError = false,
 }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
@@ -234,7 +236,16 @@ export default function StaffNewReservationPopup({
           {step === 0 ? (
             <div className="thin-scrollbar min-h-0 flex-1 overflow-y-auto">
               <p className="text-sm text-stone-600">{stepMeta.hint}. Puedes dejarlo vacío.</p>
-              {dishes.length === 0 ? (
+              {catalogLoading ? (
+                <p className="mt-6 rounded-xl border border-dashed border-stone-300 bg-white px-4 py-8 text-center text-sm text-stone-500">
+                  Cargando carta…
+                </p>
+              ) : catalogError ? (
+                <p className="mt-6 rounded-xl border border-dashed border-red-200 bg-red-50 px-4 py-8 text-center text-sm text-red-800">
+                  No se pudo cargar la carta. Puedes continuar y elegir cliente/mesa; los platos
+                  quedarán vacíos.
+                </p>
+              ) : dishes.length === 0 ? (
                 <p className="mt-6 rounded-xl border border-dashed border-stone-300 bg-white px-4 py-8 text-center text-sm text-stone-500">
                   No hay platos disponibles en la carta.
                 </p>
@@ -263,9 +274,11 @@ export default function StaffNewReservationPopup({
                   ))}
                 </ul>
               )}
-              <p className="mt-3 text-sm text-stone-600">
-                {selectedFoodCount} uds · subtotal {formatMoney(foodTotal)}
-              </p>
+              {!catalogLoading ? (
+                <p className="mt-3 text-sm text-stone-600">
+                  {selectedFoodCount} uds · subtotal {formatMoney(foodTotal)}
+                </p>
+              ) : null}
             </div>
           ) : null}
 
@@ -298,7 +311,11 @@ export default function StaffNewReservationPopup({
               </div>
 
               {guestMode === "existing" ? (
-                customers.length ? (
+                catalogLoading ? (
+                  <p className="rounded-xl border border-dashed border-stone-300 bg-white px-3 py-4 text-sm text-stone-500">
+                    Cargando clientes…
+                  </p>
+                ) : customers.length ? (
                   <label className="block text-sm font-medium text-stone-700">
                     Cliente
                     <select
