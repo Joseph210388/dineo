@@ -86,6 +86,7 @@ pg_dump --schema=public --data-only --no-owner --no-privileges ^
 
 ## Diario de la base
 
+- **2026-09-23** — Tabla `restaurant_tables` + `reservations.table_id`; panel staff reservas por día.
 - **2026-09-21** — Tabla `posts` (blog) + bucket Storage `blog`.
 - **2026-09-21** — Storage: buckets `dishes` y `avatars` + policies de lectura pública.
 - **2026-09-21** — `reservations.kitchen_note` (nota libre para cocina).

@@ -227,6 +227,31 @@ create index if not exists reservation_items_reservation_id_idx on reservation_i
 create index if not exists reservation_items_dish_id_idx on reservation_items (dish_id);
 
 -- ---------------------------------------------------------------------------
+-- Mesas físicas del local
+-- ---------------------------------------------------------------------------
+create table if not exists restaurant_tables (
+  id bigint generated always as identity primary key,
+  number integer not null,
+  capacity integer not null default 2,
+  label text not null default '',
+  zone text not null default 'salon',
+  is_active boolean not null default true,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now(),
+  constraint restaurant_tables_number_unique unique (number),
+  constraint restaurant_tables_capacity_positive check (capacity > 0),
+  constraint restaurant_tables_zone_allowed check (zone in ('salon', 'ventana', 'reservada', 'barra'))
+);
+
+create index if not exists restaurant_tables_active_idx on restaurant_tables (is_active, sort_order);
+
+alter table reservations
+  add column if not exists table_id bigint references restaurant_tables(id) on delete set null;
+
+create index if not exists reservations_table_id_idx on reservations (table_id);
+create index if not exists reservations_date_table_idx on reservations (reservation_date, table_id);
+
+-- ---------------------------------------------------------------------------
 -- Blog del local (noticias, promos, platos destacados, eventos)
 -- ---------------------------------------------------------------------------
 create table if not exists posts (
@@ -282,6 +307,7 @@ begin
     revoke all on table reservation_items from anon, authenticated;
     revoke all on table posts from anon, authenticated;
     revoke all on table categories from anon, authenticated;
+    revoke all on table restaurant_tables from anon, authenticated;
   end if;
 end $$;
 
@@ -299,3 +325,4 @@ alter table cart_items enable row level security;
 alter table reservations enable row level security;
 alter table reservation_items enable row level security;
 alter table posts enable row level security;
+alter table restaurant_tables enable row level security;

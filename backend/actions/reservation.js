@@ -3,6 +3,7 @@
 import { sql } from "../db";
 import { requireCustomer } from "../auth";
 import { deleteAllCartItems, getCartItems } from "./cart";
+import { assertTableAvailable } from "./tables";
 import { DEFAULT_PAYMENT_METHOD, isPaymentMethod } from "../../lib/payment-methods";
 import {
   DEFAULT_DIETARY,
@@ -24,12 +25,12 @@ export async function createReservation(
   contactEmail = "",
   tableType = DEFAULT_TABLE_TYPE,
   dietaryNote = DEFAULT_DIETARY,
-  kitchenNote = ""
+  kitchenNote = "",
+  tableId = null
 ) {
   const user = await requireCustomer();
   const items = await getCartItems();
   const method = isPaymentMethod(paymentMethod) ? paymentMethod : DEFAULT_PAYMENT_METHOD;
-  const table = isTableType(tableType) ? tableType : DEFAULT_TABLE_TYPE;
   const dietary = isDietaryOption(dietaryNote) ? dietaryNote : DEFAULT_DIETARY;
   const kitchen = String(kitchenNote || "").trim().slice(0, 280);
   const accountName = [user.firstName, user.lastName].filter(Boolean).join(" ").trim();
@@ -46,6 +47,28 @@ export async function createReservation(
     throw new Error("El carrito esta vacio");
   }
 
+  if (!tableId) {
+    throw new Error("Debes elegir una mesa");
+  }
+
+  const availability = await assertTableAvailable({
+    tableId,
+    date: reservationDate,
+    time: reservationTime,
+    people: numberOfPeople,
+  });
+
+  if (!availability.ok) {
+    throw new Error(availability.message || "Esa mesa no está disponible");
+  }
+
+  const resolvedTableType = isTableType(availability.table.zone)
+    ? availability.table.zone
+    : isTableType(tableType)
+      ? tableType
+      : DEFAULT_TABLE_TYPE;
+  const durationMinutes = availability.durationMinutes;
+
   const [reservation] = await sql`
     insert into reservations (
       user_id,
@@ -58,7 +81,9 @@ export async function createReservation(
       table_type,
       dietary_note,
       kitchen_note,
-      notes
+      notes,
+      table_id,
+      duration_minutes
     )
     values (
       ${user.id},
@@ -68,12 +93,14 @@ export async function createReservation(
       ${totalPrice},
       'confirmed',
       ${method},
-      ${table},
+      ${resolvedTableType},
       ${dietary},
       ${kitchen},
-      ${notes}
+      ${notes},
+      ${Number(availability.table.id)},
+      ${durationMinutes}
     )
-    returning id, reservation_date, reservation_time, number_of_people, total_price, status, payment_method, table_type, dietary_note, kitchen_note, notes
+    returning id, reservation_date, reservation_time, number_of_people, total_price, status, payment_method, table_type, dietary_note, kitchen_note, notes, table_id, duration_minutes
   `;
 
   for (const item of items) {
@@ -101,7 +128,9 @@ export async function getReservationsByUser() {
       table_type,
       dietary_note,
       kitchen_note,
-      notes
+      notes,
+      table_id,
+      duration_minutes
     from reservations
     where user_id = ${user.id}
     order by reservation_date desc, reservation_time desc
@@ -133,6 +162,8 @@ export async function getReservationsByUser() {
       dietaryNote: reservation.dietary_note || DEFAULT_DIETARY,
       kitchenNote: reservation.kitchen_note || "",
       notes: reservation.notes || "",
+      tableId: reservation.table_id ? String(reservation.table_id) : null,
+      durationMinutes: reservation.duration_minutes != null ? Number(reservation.duration_minutes) : null,
       dishDetail: dishes.map((dish) => ({
         dishName: dish.dish_name,
         quantity: dish.quantity,

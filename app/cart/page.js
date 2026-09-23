@@ -8,15 +8,13 @@ import { createReservation } from "../../backend/actions/reservation";
 import { formatMoney } from "../../backend/staff-format";
 import { CART_CHANGED_EVENT, notifyCartChanged } from "../../lib/cart-events";
 import { DEFAULT_PAYMENT_METHOD } from "../../lib/payment-methods";
-import {
-  DEFAULT_DIETARY,
-  DEFAULT_TABLE_TYPE,
-} from "../../lib/reservation-preferences";
+import { DEFAULT_DIETARY } from "../../lib/reservation-preferences";
 import { toast } from "../../lib/toast";
 import { useAuth } from "../../components/auth-provider";
 import PaymentCheckout from "../../components/payment-method-picker/payment-checkout";
 import CheckoutStepper from "../../components/cart/checkout-stepper";
 import PreferencePicker from "../../components/cart/preference-picker";
+import TablePicker from "../../components/cart/table-picker";
 import ReservationSuccess from "../../components/cart/reservation-success";
 import CartSuggestCarousel from "../../components/cart-button/cart-suggest-carousel";
 import DishPopup from "../../components/dish-popup/dish-popup";
@@ -58,8 +56,9 @@ export default function Cart() {
   const [reservationDate, setReservationDate] = useState("");
   const [reservationTime, setReservationTime] = useState("");
   const [numberOfPeople, setNumberOfPeople] = useState(2);
+  const [selectedTableId, setSelectedTableId] = useState("");
+  const [selectedTableCapacity, setSelectedTableCapacity] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState(DEFAULT_PAYMENT_METHOD);
-  const [tableType, setTableType] = useState(DEFAULT_TABLE_TYPE);
   const [dietaryNote, setDietaryNote] = useState(DEFAULT_DIETARY);
   const [kitchenNote, setKitchenNote] = useState("");
   const [checkoutStep, setCheckoutStep] = useState(1);
@@ -133,12 +132,21 @@ export default function Cart() {
     const emailOk = looksLikeEmail(emailValue);
     const phoneOk = looksLikePhone(contactPhone);
     setIsFormValid(
-      Boolean(reservationDate && reservationTime && numberOfPeople >= 1 && nameOk && emailOk && phoneOk)
+      Boolean(
+        reservationDate &&
+          reservationTime &&
+          numberOfPeople >= 1 &&
+          selectedTableId &&
+          nameOk &&
+          emailOk &&
+          phoneOk
+      )
     );
   }, [
     reservationDate,
     reservationTime,
     numberOfPeople,
+    selectedTableId,
     nameMode,
     guestName,
     contactPhone,
@@ -260,9 +268,10 @@ export default function Cart() {
         reservedName,
         contactPhone.trim(),
         reservedEmail,
-        tableType,
+        "salon",
         dietaryNote,
-        kitchenNote
+        kitchenNote,
+        selectedTableId
       );
 
       notifyCartChanged();
@@ -280,7 +289,7 @@ export default function Cart() {
       return true;
     } catch (error) {
       console.error("Error al crear la reserva:", error);
-      toast.error("No se pudo completar la reserva. Inténtalo de nuevo.");
+      toast.error(error?.message || "No se pudo completar la reserva. Inténtalo de nuevo.");
       return false;
     } finally {
       setIsSubmitting(false);
@@ -544,7 +553,7 @@ export default function Cart() {
             </fieldset>
 
             <div className="mt-4">
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                 <div className="min-w-0">
                   <label htmlFor="reservationDate" className="text-xs font-semibold text-stone-800">
                     Fecha
@@ -553,7 +562,11 @@ export default function Cart() {
                     id="reservationDate"
                     type="date"
                     value={reservationDate}
-                    onChange={(event) => setReservationDate(event.target.value)}
+                    onChange={(event) => {
+                      setReservationDate(event.target.value);
+                      setSelectedTableId("");
+                      setSelectedTableCapacity(null);
+                    }}
                     min={tomorrowFormatted}
                     required
                     className={compactFieldClass}
@@ -567,23 +580,34 @@ export default function Cart() {
                     id="reservationTime"
                     type="time"
                     value={reservationTime}
-                    onChange={(event) => setReservationTime(event.target.value)}
+                    onChange={(event) => {
+                      setReservationTime(event.target.value);
+                      setSelectedTableId("");
+                      setSelectedTableCapacity(null);
+                    }}
                     min="12:00"
                     max="23:59"
                     required
                     className={compactFieldClass}
                   />
                 </div>
-                <div className="min-w-0">
+                <div className="col-span-2 min-w-0 sm:col-span-1">
                   <label htmlFor="numberOfPeople" className="text-xs font-semibold text-stone-800">
-                    Personas
+                    Comensales
                   </label>
                   <div className="mt-1 flex items-center gap-1">
                     <button
                       type="button"
                       aria-label="Menos personas"
                       className="flex h-8 w-7 shrink-0 items-center justify-center rounded-lg border border-stone-300 bg-white text-sm font-semibold text-stone-800 transition hover:border-red-700 hover:text-red-800"
-                      onClick={() => setNumberOfPeople((value) => Math.max(1, value - 1))}
+                      onClick={() =>
+                        setNumberOfPeople((value) => {
+                          const next = Math.max(1, value - 1);
+                          setSelectedTableId("");
+                          setSelectedTableCapacity(null);
+                          return next;
+                        })
+                      }
                     >
                       −
                     </button>
@@ -593,10 +617,15 @@ export default function Cart() {
                       value={numberOfPeople}
                       onChange={(event) => {
                         const next = Number.parseInt(event.target.value, 10);
-                        setNumberOfPeople(Number.isFinite(next) && next >= 1 ? next : 1);
+                        const cappedMax = selectedTableCapacity || 20;
+                        const safe =
+                          Number.isFinite(next) && next >= 1 ? Math.min(cappedMax, next) : 1;
+                        setNumberOfPeople(safe);
+                        setSelectedTableId("");
+                        setSelectedTableCapacity(null);
                       }}
                       min="1"
-                      max="20"
+                      max={selectedTableCapacity || 20}
                       required
                       className={`${compactFieldClass} mt-0 text-center font-semibold`}
                     />
@@ -604,14 +633,41 @@ export default function Cart() {
                       type="button"
                       aria-label="Más personas"
                       className="flex h-8 w-7 shrink-0 items-center justify-center rounded-lg border border-stone-300 bg-white text-sm font-semibold text-stone-800 transition hover:border-red-700 hover:text-red-800"
-                      onClick={() => setNumberOfPeople((value) => Math.min(20, value + 1))}
+                      onClick={() =>
+                        setNumberOfPeople((value) => {
+                          const cappedMax = selectedTableCapacity || 20;
+                          const next = Math.min(cappedMax, value + 1);
+                          setSelectedTableId("");
+                          setSelectedTableCapacity(null);
+                          return next;
+                        })
+                      }
                     >
                       +
                     </button>
                   </div>
                 </div>
               </div>
-              <p className="mt-1.5 text-[0.65rem] text-red-800/90">Horario disponible: 12:00 – 23:59</p>
+              <p className="mt-1.5 text-[0.65rem] text-red-800/90">
+                Horario 12:00 – 23:59 · Elige mesa abajo (hover = zona y capacidad)
+              </p>
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-stone-200/80 bg-stone-50/60 p-3 sm:p-4">
+              <TablePicker
+                date={reservationDate}
+                time={reservationTime}
+                people={numberOfPeople}
+                value={selectedTableId}
+                onChange={(id, table) => {
+                  setSelectedTableId(id);
+                  setSelectedTableCapacity(table?.capacity ?? null);
+                  if (table?.capacity && numberOfPeople > table.capacity) {
+                    setNumberOfPeople(table.capacity);
+                  }
+                }}
+                onPeopleSuggest={(count) => setNumberOfPeople(count)}
+              />
             </div>
 
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -660,8 +716,6 @@ export default function Cart() {
 
             <div className="mt-5">
               <PreferencePicker
-                tableType={tableType}
-                onTableTypeChange={setTableType}
                 dietaryNote={dietaryNote}
                 onDietaryNoteChange={setDietaryNote}
                 kitchenNote={kitchenNote}

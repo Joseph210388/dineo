@@ -1,6 +1,6 @@
 "use client";
 
-import { DIETARY_OPTIONS, TABLE_TYPES } from "../../lib/reservation-preferences";
+import { DIETARY_OPTIONS } from "../../lib/reservation-preferences";
 
 const noteClass =
   "mt-1.5 w-full resize-none rounded-xl border border-stone-300/80 bg-white px-3 py-2 text-sm text-stone-800 outline-none transition placeholder:text-stone-400 focus:border-red-700 focus:ring-4 focus:ring-red-700/15";
@@ -45,11 +45,10 @@ function ChipGroup({ legend, options, value, onChange, name }) {
 }
 
 /**
- * Mesa y dietética en chips compactos + nota libre para cocina.
+ * Dietética en chips + nota libre para cocina.
+ * La mesa física se elige en TablePicker.
  */
 export default function PreferencePicker({
-  tableType,
-  onTableTypeChange,
   dietaryNote,
   onDietaryNoteChange,
   kitchenNote = "",
@@ -57,13 +56,6 @@ export default function PreferencePicker({
 }) {
   return (
     <div className="space-y-4">
-      <ChipGroup
-        legend="Mesa"
-        name="tableType"
-        options={TABLE_TYPES}
-        value={tableType}
-        onChange={onTableTypeChange}
-      />
       <ChipGroup
         legend="Alérgenos / dietética"
         name="dietaryNote"

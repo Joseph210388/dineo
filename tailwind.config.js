@@ -57,6 +57,14 @@ module.exports = {
           from: { opacity: "0", transform: "translate3d(0, -0.35rem, 0)" },
           to: { opacity: "1", transform: "translate3d(0, 0, 0)" },
         },
+        stepPushIn: {
+          from: { transform: "translate3d(100%, 0, 0)", opacity: "0.35" },
+          to: { transform: "translate3d(0, 0, 0)", opacity: "1" },
+        },
+        stepPushInPrev: {
+          from: { transform: "translate3d(-100%, 0, 0)", opacity: "0.35" },
+          to: { transform: "translate3d(0, 0, 0)", opacity: "1" },
+        },
       },
       animation: {
         "sheet-in": "sheetIn 0.32s cubic-bezier(0.22, 1, 0.36, 1) both",
@@ -68,6 +76,8 @@ module.exports = {
         "cart-pop": "cartPop 0.4s ease-out",
         "cart-row-out": "cartRowOut 0.45s ease forwards",
         "cart-notice-in": "cartNoticeIn 0.3s ease-out both",
+        "step-push-in": "stepPushIn 0.32s cubic-bezier(0.22, 1, 0.36, 1) both",
+        "step-push-in-prev": "stepPushInPrev 0.32s cubic-bezier(0.22, 1, 0.36, 1) both",
       },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
