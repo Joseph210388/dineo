@@ -95,28 +95,33 @@ export async function getStaffPost(id) {
 /** Entradas publicadas para la web (sin login). */
 export async function listPublishedPosts({ limit = 24 } = {}) {
   const safeLimit = Math.min(Math.max(Number(limit) || 24, 1), 50);
-  const rows = await sql`
-    select
-      p.id,
-      p.title,
-      p.slug,
-      p.excerpt,
-      p.body,
-      p.cover_image_url,
-      p.kind,
-      p.status,
-      p.author_id,
-      p.published_at,
-      p.created_at,
-      p.updated_at,
-      trim(concat(coalesce(u.first_name, ''), ' ', coalesce(u.last_name, ''))) as author_name
-    from posts p
-    left join users u on u.id = p.author_id
-    where p.status = 'published'
-    order by coalesce(p.published_at, p.created_at) desc
-    limit ${safeLimit}
-  `;
-  return rows.map(mapPost);
+  try {
+    const rows = await sql`
+      select
+        p.id,
+        p.title,
+        p.slug,
+        p.excerpt,
+        p.body,
+        p.cover_image_url,
+        p.kind,
+        p.status,
+        p.author_id,
+        p.published_at,
+        p.created_at,
+        p.updated_at,
+        trim(concat(coalesce(u.first_name, ''), ' ', coalesce(u.last_name, ''))) as author_name
+      from posts p
+      left join users u on u.id = p.author_id
+      where p.status = 'published'
+      order by coalesce(p.published_at, p.created_at) desc
+      limit ${safeLimit}
+    `;
+    return rows.map(mapPost);
+  } catch (error) {
+    console.error("listPublishedPosts:", error?.code || error?.message);
+    return [];
+  }
 }
 
 export async function getPublishedPostBySlug(slug) {

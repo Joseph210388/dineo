@@ -38,13 +38,23 @@ function connectionUrlForRuntime(rawUrl) {
   return rawUrl;
 }
 
-function shouldReconnect(error) {
-  const code = String(error?.code || "");
+export function isTransientDbError(error) {
+  const code = String(error?.code || "").toUpperCase();
+  const message = String(error?.message || error || "").toUpperCase();
   return (
     code === "CONNECT_TIMEOUT" ||
     code === "CONNECTION_CLOSED" ||
     code === "CONNECTION_ENDED" ||
-    code === "ECONNRESET"
+    code === "ECONNRESET" ||
+    code === "ETIMEDOUT" ||
+    code === "57P01" ||
+    message.includes("CONNECT_TIMEOUT") ||
+    message.includes("CONNECTION CLOSED") ||
+    message.includes("CONNECTION_CLOSED") ||
+    message.includes("CONNECTION ENDED") ||
+    message.includes("CONNECTION_ENDED") ||
+    message.includes("ECONNRESET") ||
+    message.includes("ETIMEDOUT")
   );
 }
 
@@ -70,8 +80,9 @@ function createSql() {
     ssl: "require",
     // En Vercel cada instancia atiende pocas peticiones; en local varias a la vez se encolaban con max: 1
     max: isServerless ? 1 : 8,
-    idle_timeout: isServerless ? 10 : 20,
-    max_lifetime: isServerless ? 60 : 0,
+    idle_timeout: isServerless ? 20 : 20,
+    // Evita reutilizar sockets que el pooler ya cerro (en el navegador se veia "Connection closed")
+    max_lifetime: isServerless ? 60 * 5 : 0,
     // El limite de la funcion en Hobby es 10s; no podemos gastarlos todos en el handshake
     connect_timeout: 5,
     prepare: false,
@@ -103,6 +114,18 @@ function runQuery(args) {
   return getSql()(...args);
 }
 
+async function runQueryWithRetry(args, attemptsLeft = 2) {
+  try {
+    return await runQuery(args);
+  } catch (error) {
+    if (!isTransientDbError(error) || attemptsLeft <= 0) {
+      throw error;
+    }
+    resetSql();
+    return runQueryWithRetry(args, attemptsLeft - 1);
+  }
+}
+
 // Proxy: el cliente se crea en la primera consulta, no al cargar el archivo
 export const sql = new Proxy(function sqlTag() {}, {
   apply(_target, _thisArg, args) {
@@ -118,11 +141,11 @@ export const sql = new Proxy(function sqlTag() {}, {
     }
 
     return result.catch((error) => {
-      if (!shouldReconnect(error)) {
+      if (!isTransientDbError(error)) {
         throw error;
       }
       resetSql();
-      return runQuery(args);
+      return runQueryWithRetry(args, 1);
     });
   },
   get(_target, property) {

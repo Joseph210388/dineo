@@ -14,9 +14,16 @@ export function AuthProvider({ children }) {
   const [isLoaded, setIsLoaded] = useState(false);
 
   const refreshUser = async () => {
-    const sessionUser = await getSessionUser();
-    setUser(sessionUser);
-    setIsLoaded(true);
+    try {
+      const sessionUser = await getSessionUser();
+      setUser(sessionUser);
+    } catch (error) {
+      // Fallos de red/DB en Vercel no deben tumbar toda la app (Connection closed)
+      console.error("No se pudo cargar la sesion:", error);
+      setUser(null);
+    } finally {
+      setIsLoaded(true);
+    }
   };
 
   useEffect(() => {

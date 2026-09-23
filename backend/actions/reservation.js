@@ -1,6 +1,6 @@
 "use server";
 
-import { sql } from "../db";
+import { isTransientDbError, sql } from "../db";
 import { requireCustomer } from "../auth";
 import { deleteAllCartItems, getCartItems } from "./cart";
 import { assertTableAvailable } from "./tables";
@@ -115,62 +115,83 @@ export async function createReservation(
 }
 
 export async function getReservationsByUser() {
-  const user = await requireCustomer();
-  const reservations = await sql`
-    select
-      id,
-      reservation_date,
-      reservation_time,
-      number_of_people,
-      total_price,
-      status,
-      payment_method,
-      table_type,
-      dietary_note,
-      kitchen_note,
-      notes,
-      table_id,
-      duration_minutes
-    from reservations
-    where user_id = ${user.id}
-    order by reservation_date desc, reservation_time desc
-  `;
+  try {
+    const user = await requireCustomer();
+    const reservations = await sql`
+      select
+        id,
+        reservation_date,
+        reservation_time,
+        number_of_people,
+        total_price,
+        status,
+        payment_method,
+        table_type,
+        dietary_note,
+        kitchen_note,
+        notes,
+        table_id,
+        duration_minutes
+      from reservations
+      where user_id = ${user.id}
+      order by reservation_date desc, reservation_time desc
+    `;
 
-  const result = [];
-  for (const reservation of reservations) {
-    const dishes = await sql`
-      select dish_name, quantity, unit_price
+    if (reservations.length === 0) {
+      return [];
+    }
+
+    // Una sola consulta de platos (antes era 1 por reserva y en Vercel agotaba el pool)
+    const reservationIds = reservations.map((reservation) => reservation.id);
+    const dishRows = await sql`
+      select reservation_id, dish_name, quantity, unit_price
       from reservation_items
-      where reservation_id = ${reservation.id}
+      where reservation_id in ${sql(reservationIds)}
       order by dish_name
     `;
 
-    const reservationDate =
-      typeof reservation.reservation_date === "string"
-        ? reservation.reservation_date.slice(0, 10)
-        : new Date(reservation.reservation_date).toISOString().slice(0, 10);
-
-    result.push({
-      _id: String(reservation.id),
-      reservationDate,
-      reservationTime: String(reservation.reservation_time).slice(0, 5),
-      numberOfPeople: reservation.number_of_people,
-      total_price: Number(reservation.total_price),
-      status: reservation.status,
-      paymentMethod: reservation.payment_method || DEFAULT_PAYMENT_METHOD,
-      tableType: reservation.table_type || DEFAULT_TABLE_TYPE,
-      dietaryNote: reservation.dietary_note || DEFAULT_DIETARY,
-      kitchenNote: reservation.kitchen_note || "",
-      notes: reservation.notes || "",
-      tableId: reservation.table_id ? String(reservation.table_id) : null,
-      durationMinutes: reservation.duration_minutes != null ? Number(reservation.duration_minutes) : null,
-      dishDetail: dishes.map((dish) => ({
+    const dishesByReservation = new Map();
+    for (const dish of dishRows) {
+      const key = String(dish.reservation_id);
+      const list = dishesByReservation.get(key) || [];
+      list.push({
         dishName: dish.dish_name,
         quantity: dish.quantity,
         unitPrice: Number(dish.unit_price),
-      })),
-    });
-  }
+      });
+      dishesByReservation.set(key, list);
+    }
 
-  return result;
+    return reservations.map((reservation) => {
+      const reservationDate =
+        typeof reservation.reservation_date === "string"
+          ? reservation.reservation_date.slice(0, 10)
+          : new Date(reservation.reservation_date).toISOString().slice(0, 10);
+
+      return {
+        _id: String(reservation.id),
+        reservationDate,
+        reservationTime: String(reservation.reservation_time).slice(0, 5),
+        numberOfPeople: reservation.number_of_people,
+        total_price: Number(reservation.total_price),
+        status: reservation.status,
+        paymentMethod: reservation.payment_method || DEFAULT_PAYMENT_METHOD,
+        tableType: reservation.table_type || DEFAULT_TABLE_TYPE,
+        dietaryNote: reservation.dietary_note || DEFAULT_DIETARY,
+        kitchenNote: reservation.kitchen_note || "",
+        notes: reservation.notes || "",
+        tableId: reservation.table_id ? String(reservation.table_id) : null,
+        durationMinutes:
+          reservation.duration_minutes != null ? Number(reservation.duration_minutes) : null,
+        dishDetail: dishesByReservation.get(String(reservation.id)) || [],
+      };
+    });
+  } catch (error) {
+    // En el cliente esto se veia como Uncaught Error: Connection closed
+    if (isTransientDbError(error)) {
+      console.error("getReservationsByUser: conexion inestable", error?.code || error?.message);
+      return [];
+    }
+    throw error;
+  }
 }
